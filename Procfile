@@ -1,0 +1,1 @@
+web: gunicorn pdc_attendance_project.wsgi
