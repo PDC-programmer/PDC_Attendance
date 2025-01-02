@@ -1,37 +1,45 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib import messages
-from user_app.models import User, Approval
-from .models import LeaveAttendance
-from .forms import LeaveAttendanceForm
+from django.shortcuts import render
+from django.http import JsonResponse
+from user_app.models import User, BsnStaff
+from attendance_app.models import LeaveAttendance
+from django.views.decorators.csrf import csrf_exempt
+import json
 
 
+@csrf_exempt
 def leave_request_view(request):
-    if request.method == 'POST':
-        form = LeaveAttendanceForm(request.POST)
-        uid = request.POST.get('uid')  # รับ `uid` จาก LINE Login
-        user = get_object_or_404(User, uid=uid)  # ค้นหา User โดย `uid`
+    if request.method == "POST":
+        data = json.loads(request.body)
+        user_id = data.get("userID")
+        start_date = data.get("startDate")
+        end_date = data.get("endDate")
+        reason = data.get("reason")
+        leave_type = data.get("type")
 
-        # หาผู้อนุมัติจาก Approval
-        position = user.position
-        if not position:
-            messages.error(request, "User does not have a position assigned.")
-            return redirect('leave-request')
+        # ค้นหา User ที่มี UID ตรงกับ userID
+        user = User.objects.filter(uid=user_id).first()
+        if not user:
+            return JsonResponse({"error": "User not found"}, status=404)
 
-        approvers = Approval.objects.filter(approved=position, is_active=True).values_list('approver__id', flat=True)
+        # ค้นหาผู้อนุมัติจากตาราง BsnStaff
+        staff = BsnStaff.objects.filter(django_usr_id=user).first()
+        if not staff or not staff.mng_staff_id:
+            return JsonResponse({"error": "Approver not found"}, status=404)
 
-        if not approvers:
-            messages.error(request, "No approvers assigned for this user's position.")
-            return redirect('leave-request')
+        approver_user = User.objects.filter(id=staff.mng_staff_id).first()
+        if not approver_user:
+            return JsonResponse({"error": "Approver user not found"}, status=404)
 
-        if form.is_valid():
-            leave = form.save(commit=False)
-            leave.user = user
-            leave.approve_user_id = approvers[0]  # กำหนดผู้อนุมัติคนแรกในลิสต์
-            leave.status = 'pending'
-            leave.save()
-            messages.success(request, "Leave request submitted successfully!")
-            return redirect('leave-request')
-    else:
-        form = LeaveAttendanceForm()
+        # สร้าง LeaveAttendance
+        LeaveAttendance.objects.create(
+            user=user,
+            approve_user=approver_user,
+            start_date=start_date,
+            end_date=end_date,
+            reason=reason,
+            type=leave_type,
+        )
 
-    return render(request, 'attendance_app/leave_request.html', {'form': form})
+        return JsonResponse({"message": "Leave request submitted successfully"}, status=201)
+
+    return render(request, "attendance/leave_request.html")
