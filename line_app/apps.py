@@ -3,4 +3,4 @@ from django.apps import AppConfig
 
 class LineAppConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'line_app'
+    name = 'attendance_app'
