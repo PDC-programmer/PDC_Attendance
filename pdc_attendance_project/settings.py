@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import django_heroku
 
 # Load environment variables from the .env file
 load_dotenv()
@@ -140,3 +141,5 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+django_heroku.settings(locals()) #Activate Django-Heroku.

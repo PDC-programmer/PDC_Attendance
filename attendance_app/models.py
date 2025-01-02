@@ -12,6 +12,12 @@ class LeaveAttendance(models.Model):
                                                       ('pending', 'Pending'),
                                                       ('rejected', 'Rejected')],
                               default='pending')
+    type = models.CharField(max_length=50, choices=[('sick_leave', 'ลาป่วย'),
+                                                    ('annual_leave', 'ลาพักร้อน'),
+                                                    ('absence_leave', 'ลากิจ'),
+                                                    ('maternity_leave', 'ลาคลอด'),
+                                                    ('bereavement_leave', 'ลาไปงานศพ')],
+                            default='sick_leave')
 
     def __str__(self):
         return f"{self.user.username}: {self.status} ({self.start_date} to {self.end_date})"
