@@ -38,4 +38,4 @@ def leave_request_view(request):
 
         return JsonResponse({"message": "Leave request submitted successfully"})
 
-    return render(request, "leave_request.html")
+    return render(request, "attendance_app/leave_request.html")
