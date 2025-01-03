@@ -34,14 +34,11 @@ def handle_follow(event):
         user_profile.unfollow = False
         user_profile.save()
     else:
-        user = User(username=line_id)
-        user.save()
         user_profile = UserProfile(
             line_id=line_id,
             line_name=profile.display_name,
             line_picture_url=profile.picture_url,
             line_status_message=profile.status_message,
-            user=user
         )
         user_profile.save()
 
