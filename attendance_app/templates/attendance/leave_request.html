@@ -30,7 +30,7 @@
             </select>
         </div>
         <div class="mb-3">
-            <label for="reason" class="form-label">เหตุผล</label>
+            <label for="reason" class="form-label">เหตุผล*</label>
             <textarea class="form-control" id="reason" rows="3"></textarea>
         </div>
         <button id="submit-request" class="btn btn-primary w-100">ยืนยัน</button>
@@ -55,11 +55,22 @@
                                     const leaveType = document.getElementById("leave-type").value;
                                     const reason = document.getElementById("reason").value;
 
+                                    // ตรวจสอบข้อมูล
                                     if (!startDate || !endDate || !leaveType || !reason) {
                                         Swal.fire({
                                             icon: 'error',
-                                            title: 'Oops...',
+                                            title: 'ข้อมูลไม่ครบถ้วน...',
                                             text: 'กรุณากรอกข้อมูลให้ครบถ้วน !',
+                                        });
+                                        return;
+                                    }
+
+                                    // ตรวจสอบว่า endDate มากกว่า startDate หรือไม่
+                                    if (new Date(endDate) < new Date(startDate)) {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'วันที่ไม่ถูกต้อง...',
+                                            text: 'วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น !',
                                         });
                                         return;
                                     }
@@ -67,7 +78,7 @@
                                     // Show loading alert
                                     Swal.fire({
                                         title: 'กำลังบันทึกข้อมูล...',
-                                        text: 'กำลังบันทึกข้อมูลกรุณารอสักครู่...',
+                                        text: 'กรุณารอสักครู่...',
                                         allowOutsideClick: false,
                                         didOpen: () => {
                                             Swal.showLoading();
@@ -100,7 +111,7 @@
                                             Swal.fire({
                                                 icon: 'success',
                                                 title: 'เสร็จสมบูรณ์',
-                                                text: 'คำขอการลาของคุณบันทึกเสร็จสมบูรณ์ !',
+                                                text: 'บันทึกเสร็จสมบูรณ์ !',
                                             });
                                         }
                                     })
