@@ -11,6 +11,15 @@ from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
 
+# Mapping for leave type display names
+LEAVE_TYPE_DISPLAY = {
+    'sick_leave': 'ลาป่วย',
+    'annual_leave': 'ลาพักร้อน',
+    'absence_leave': 'ลากิจ',
+    'maternity_leave': 'ลาคลอด',
+    'bereavement_leave': 'ลาไปงานศพ',
+}
+
 @csrf_exempt
 def leave_request_view(request):
     if request.method == "POST":
@@ -48,21 +57,25 @@ def leave_request_view(request):
 
         # ส่ง Template Message ถึง Approver
         if approver_user.uid:
+            leave_type_display = LEAVE_TYPE_DISPLAY.get(leave_type, "Unknown Leave Type")
+            user_fullname = f"{staff.staff_fname} {staff.staff_lname}" if staff.staff_fname and staff.staff_lname else user.username
+            approver_fullname = f"{approver.staff_fname} {approver.staff_lname}" if approver.staff_fname and approver.staff_lname else approver_user.username
+
             try:
                 line_bot_api.push_message(
                     approver_user.uid,
                     TemplateSendMessage(
                         alt_text="Leave Request Approval",
                         template=ButtonsTemplate(
-                            title="Leave Request",
-                            text=f"{user.username}\nType: {leave_type}\nDates: {start_date} to {end_date}",
+                            title=f"คำขอการลาของ {user_fullname}",
+                            text=f"ประเภท: {leave_type_display}\nวันที่: {start_date} - {end_date}",
                             actions=[
                                 PostbackAction(
-                                    label="Approve",
+                                    label="อนุมัติ",
                                     data=f"action=approve&leave_id={leave_record.id}"
                                 ),
                                 PostbackAction(
-                                    label="Reject",
+                                    label="ปฏิเสธ",
                                     data=f"action=reject&leave_id={leave_record.id}"
                                 ),
                             ]
