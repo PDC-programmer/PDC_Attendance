@@ -13,7 +13,7 @@ from django.shortcuts import render
 
 
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(settings.LINE_CHANNEL_SECRET)
+handler = WebhookHandler("c9dcfe2c8294dae35286dd84d69cfc21")
 
 
 def register(request):
