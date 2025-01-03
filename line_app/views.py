@@ -10,7 +10,6 @@ from linebot.models import (
     PostbackAction, TextSendMessage, TemplateSendMessage, ButtonsTemplate
 )
 from django.shortcuts import render
-from user_app.models import User
 
 
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -25,7 +24,7 @@ def register(request):
 def handle_follow(event):
     line_id = event.source.user_id
     profile = line_bot_api.get_profile(line_id)
-    profile_exists = User.objects.filter(username=line_id).count() != 0
+    profile_exists = UserProfile.objects.filter(line_id=line_id).count() != 0
     if profile_exists:
         user_profile = UserProfile.objects.get(line_id=line_id)
         user_profile.line_name = profile.display_name
