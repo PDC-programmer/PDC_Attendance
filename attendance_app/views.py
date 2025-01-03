@@ -72,10 +72,12 @@ def leave_request_view(request):
                             actions=[
                                 PostbackAction(
                                     label="อนุมัติ",
+                                    display_text=f"อนุมัติคำขอการลารหัส: {leave_record.id}",
                                     data=f"action=approve&leave_id={leave_record.id}"
                                 ),
                                 PostbackAction(
                                     label="ปฏิเสธ",
+                                    display_text=f"ปฏิเสธคำขอการลารหัส: {leave_record.id}",
                                     data=f"action=reject&leave_id={leave_record.id}"
                                 ),
                             ]
