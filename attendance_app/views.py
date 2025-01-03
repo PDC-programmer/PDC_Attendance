@@ -26,7 +26,8 @@ def leave_request_view(request):
         if not staff or not staff.mng_staff_id:
             return JsonResponse({"error": "Approver not found"}, status=404)
 
-        approver_user = User.objects.filter(id=staff.mng_staff_id).first()
+        approver = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
+        approver_user = User.objects.filter(id=approver.django_usr_id.id).first()
         if not approver_user:
             return JsonResponse({"error": "Approver user not found"}, status=404)
 
