@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.conf import settings
 from linebot import LineBotApi
-from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction
+from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction, TextSendMessage
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -65,7 +65,7 @@ def leave_request_view(request):
                 line_bot_api.push_message(
                     approver_user.uid,
                     TemplateSendMessage(
-                        alt_text="Leave Request Approval",
+                        alt_text=f"คำขอการลาของ {user_fullname}",
                         template=ButtonsTemplate(
                             title=f"คำขอการลาของ {user_fullname}",
                             text=f"ประเภท: {leave_type_display}\nวันที่: {start_date} - {end_date}",
@@ -86,6 +86,16 @@ def leave_request_view(request):
                 )
             except Exception as e:
                 return JsonResponse({"error": f"Failed to send message: {str(e)}"}, status=500)
+
+            if not user:
+                return JsonResponse({"error": "User not found"}, status=404)
+            else:
+                line_bot_api.push_message(
+                    user_id,
+                    TextSendMessage(
+                        text=f"คำขอการลา: {leave_record.id}\nกำลังรอการพิจารณา\nผู้อนุมัติ: {approver_fullname}"
+                                    )
+                )
 
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
 
