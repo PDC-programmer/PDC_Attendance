@@ -22,24 +22,33 @@ def register(request):
 
 @handler.add(FollowEvent)
 def handle_follow(event):
-    line_id = event.source.user_id
-    profile = line_bot_api.get_profile(line_id)
-    profile_exists = UserProfile.objects.filter(line_id=line_id).count() != 0
-    if profile_exists:
-        user_profile = UserProfile.objects.get(line_id=line_id)
-        user_profile.line_name = profile.display_name
-        user_profile.line_picture_url = profile.picture_url
-        user_profile.line_status_message = profile.status_message
-        user_profile.unfollow = False
-        user_profile.save()
-    else:
-        user_profile = UserProfile(
-            line_id=line_id,
-            line_name=profile.display_name,
-            line_picture_url=profile.picture_url,
-            line_status_message=profile.status_message,
-        )
-        user_profile.save()
+    try:
+        line_id = event.source.user_id
+        profile = line_bot_api.get_profile(line_id)
+
+        # Debugging logs
+        print(f"Received follow event from LINE ID: {line_id}")
+        print(f"Profile: {profile.display_name}, {profile.picture_url}, {profile.status_message}")
+
+        # Check if the profile exists
+        profile_exists = UserProfile.objects.filter(line_id=line_id).exists()
+        if profile_exists:
+            user_profile = UserProfile.objects.get(line_id=line_id)
+            user_profile.line_name = profile.display_name
+            user_profile.line_picture_url = profile.picture_url
+            user_profile.line_status_message = profile.status_message
+            user_profile.unfollow = False
+            user_profile.save()
+        else:
+            UserProfile.objects.create(
+                line_id=line_id,
+                line_name=profile.display_name,
+                line_picture_url=profile.picture_url,
+                line_status_message=profile.status_message,
+            )
+        print("UserProfile updated or created successfully.")
+    except Exception as e:
+        print(f"Error in handle_follow: {e}")
 
 
 @csrf_exempt
