@@ -68,7 +68,7 @@ def leave_request_view(request):
                         alt_text="Leave Request Approval",
                         template=ButtonsTemplate(
                             title=f"คำขอการลาของ {user_fullname}",
-                            text=f"ประเภท: {leave_type_display}\nวันที่: {start_date} - {end_date}\nเหตุผล: {reason}",
+                            text=f"ประเภท: {leave_type_display}\nวันที่: {start_date} - {end_date}",
                             actions=[
                                 PostbackAction(
                                     label="อนุมัติ",
