@@ -11,8 +11,6 @@ from linebot.models import (
     PostbackAction, TemplateSendMessage, ButtonsTemplate, TextSendMessage
 )
 from django.shortcuts import render
-from django.http import JsonResponse
-from user_app.models import BsnStaff
 import json
 
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -27,39 +25,6 @@ STATUS_DISPLAY = {
 
 def register(request):
     return render(request, 'line_app/register.html')
-
-
-@csrf_exempt
-def register_employee(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            employee_code = data.get("employeeCode")
-            user_id = data.get("userId")
-
-            if not employee_code or not user_id:
-                return JsonResponse({"error": "Missing employee code or user ID"}, status=400)
-
-            # ค้นหา BsnStaff ด้วย employee_code
-            staff = BsnStaff.objects.filter(staff_code=employee_code).first()
-            if not staff:
-                return JsonResponse({"error": "Invalid employee code"}, status=404)
-
-            # ตรวจสอบ django_user_id ใน BsnStaff
-            user = User.objects.filter(id=staff.django_usr_id_id).first()
-            if not user:
-                return JsonResponse({"error": "User not found for this employee code"}, status=404)
-
-            # อัปเดต uid ใน User
-            user.uid = user_id
-            user.save()
-
-            return JsonResponse({"message": "User ID successfully linked to employee code"}, status=200)
-        except Exception as e:
-            return JsonResponse({"error": f"An error occurred: {str(e)}"}, status=500)
-
-    return JsonResponse({"error": "Invalid request method"}, status=405)
-
 
 
 @handler.add(FollowEvent)
