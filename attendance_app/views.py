@@ -55,7 +55,7 @@ def leave_request_view(request):
                         alt_text="Leave Request Approval",
                         template=ButtonsTemplate(
                             title="Leave Request",
-                            text=f"Employee: {user.username}\nType: {leave_type}\nReason: {reason}\nDates: {start_date} to {end_date}",
+                            text=f"{user.username}\nType: {leave_type}\nDates: {start_date} to {end_date}",
                             actions=[
                                 PostbackAction(
                                     label="Approve",
