@@ -3,23 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leave Request</title>
+    <title>คำขอการลา</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- SweetAlert2 -->
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="text-center">Leave Request</h1>
+        <h1 class="text-center">คำขอการลา</h1>
         <div class="mb-3">
-            <label for="start-date" class="form-label">Start Date</label>
+            <label for="start-date" class="form-label">เริ่มวันที่*</label>
             <input type="date" class="form-control" id="start-date">
         </div>
         <div class="mb-3">
-            <label for="end-date" class="form-label">End Date</label>
+            <label for="end-date" class="form-label">ถึงวันที่*</label>
             <input type="date" class="form-control" id="end-date">
         </div>
         <div class="mb-3">
-            <label for="leave-type" class="form-label">Leave Type</label>
+            <label for="leave-type" class="form-label">ประเภทการลา*</label>
             <select class="form-select" id="leave-type">
                 <option value="sick_leave">ลาป่วย</option>
                 <option value="annual_leave">ลาพักร้อน</option>
@@ -29,10 +30,10 @@
             </select>
         </div>
         <div class="mb-3">
-            <label for="reason" class="form-label">Reason</label>
+            <label for="reason" class="form-label">เหตุผล</label>
             <textarea class="form-control" id="reason" rows="3"></textarea>
         </div>
-        <button id="submit-request" class="btn btn-primary w-100">Submit Request</button>
+        <button id="submit-request" class="btn btn-primary w-100">ยืนยัน</button>
     </div>
 
     <script>
@@ -54,6 +55,25 @@
                                     const leaveType = document.getElementById("leave-type").value;
                                     const reason = document.getElementById("reason").value;
 
+                                    if (!startDate || !endDate || !leaveType || !reason) {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Oops...',
+                                            text: 'กรุณากรอกข้อมูลให้ครบถ้วน !',
+                                        });
+                                        return;
+                                    }
+
+                                    // Show loading alert
+                                    Swal.fire({
+                                        title: 'กำลังบันทึกข้อมูล...',
+                                        text: 'กำลังบันทึกข้อมูลกรุณารอสักครู่...',
+                                        allowOutsideClick: false,
+                                        didOpen: () => {
+                                            Swal.showLoading();
+                                        }
+                                    });
+
                                     fetch("/attendance/leave-request/", {
                                         method: "POST",
                                         headers: {
@@ -69,13 +89,30 @@
                                     })
                                     .then(response => response.json())
                                     .then(data => {
+                                        Swal.close(); // Close loading alert
                                         if (data.error) {
-                                            alert(data.error);
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'เกิดข้อผิดพลาด',
+                                                text: data.error,
+                                            });
                                         } else {
-                                            alert("Leave request submitted successfully");
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'เสร็จสมบูรณ์',
+                                                text: 'คำขอการลาของคุณบันทึกเสร็จสมบูรณ์ !',
+                                            });
                                         }
                                     })
-                                    .catch(error => console.error("Error:", error));
+                                    .catch(error => {
+                                        Swal.close(); // Close loading alert
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'เกิดข้อผิดพลาด',
+                                            text: 'ไม่สามารถบันทึกคำขอการลาได้ !',
+                                        });
+                                        console.error("Error:", error);
+                                    });
                                 });
                             })
                             .catch(err => console.error("Error getting profile: ", err));

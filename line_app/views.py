@@ -16,6 +16,12 @@ import json
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(settings.LINE_CHANNEL_SECRET)
 
+# Mapping for leave type display names
+STATUS_DISPLAY = {
+    'approved': 'อนุมัติ',
+    'rejected': 'ปฏิเสธ',
+}
+
 
 def register(request):
     return render(request, 'line_app/register.html')
@@ -95,6 +101,8 @@ def handle_postback(event):
 
         leave_record.save()
 
+        status_display = STATUS_DISPLAY.get(leave_record.status, "Unknown Status")
+
         # Send confirmation message to approver
         line_bot_api.reply_message(
             event.reply_token,
@@ -106,7 +114,7 @@ def handle_postback(event):
         if requester_line_id:
             line_bot_api.push_message(
                 requester_line_id,
-                TextSendMessage(text=f"คำขอการลาของคุณได้รับการ {leave_record.status} !")
+                TextSendMessage(text=f"คำขอการลาของคุณได้รับการ {status_display} !")
             )
     except Exception as e:
         print(f"Error in handle_postback: {e}")
