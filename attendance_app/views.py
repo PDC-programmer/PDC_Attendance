@@ -4,6 +4,10 @@ from user_app.models import User, BsnStaff
 from attendance_app.models import LeaveAttendance
 from django.views.decorators.csrf import csrf_exempt
 import json
+from django.conf import settings
+
+
+LINE_CHANNEL_ACCESS_TOKEN = settings.LINE_CHANNEL_ACCESS_TOKEN  # Replace with your Line Channel Access Token
 
 
 @csrf_exempt

@@ -18,7 +18,7 @@ import django_heroku
 # Load environment variables from the .env file
 load_dotenv()
 
-
+LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
