@@ -5,10 +5,11 @@ from attendance_app.models import LeaveAttendance
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.conf import settings
+from linebot import LineBotApi
+from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction
 
-
-LINE_CHANNEL_ACCESS_TOKEN = settings.LINE_CHANNEL_ACCESS_TOKEN  # Replace with your Line Channel Access Token
-
+# Initialize LineBotApi
+line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
 
 @csrf_exempt
 def leave_request_view(request):
@@ -36,7 +37,7 @@ def leave_request_view(request):
             return JsonResponse({"error": "Approver user not found"}, status=404)
 
         # สร้าง LeaveAttendance
-        LeaveAttendance.objects.create(
+        leave_record = LeaveAttendance.objects.create(
             user=user,
             approve_user=approver_user,
             start_date=start_date,
@@ -45,6 +46,32 @@ def leave_request_view(request):
             type=leave_type,
         )
 
-        return JsonResponse({"message": "Leave request submitted successfully"}, status=201)
+        # ส่ง Template Message ถึง Approver
+        if approver_user.uid:
+            try:
+                line_bot_api.push_message(
+                    approver_user.uid,
+                    TemplateSendMessage(
+                        alt_text="Leave Request Approval",
+                        template=ButtonsTemplate(
+                            title="Leave Request",
+                            text=f"Employee: {user.username}\nType: {leave_type}\nReason: {reason}\nDates: {start_date} to {end_date}",
+                            actions=[
+                                PostbackAction(
+                                    label="Approve",
+                                    data=f"action=approve&leave_id={leave_record.id}"
+                                ),
+                                PostbackAction(
+                                    label="Reject",
+                                    data=f"action=reject&leave_id={leave_record.id}"
+                                ),
+                            ]
+                        )
+                    )
+                )
+            except Exception as e:
+                return JsonResponse({"error": f"Failed to send message: {str(e)}"}, status=500)
+
+        return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
 
     return render(request, "attendance/leave_request.html")
