@@ -14,6 +14,7 @@ from linebot.models import (
 from django.shortcuts import render
 import json
 from django.http import JsonResponse
+from django.template import loader
 
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(settings.LINE_CHANNEL_SECRET)
@@ -56,8 +57,18 @@ def get_staff_info(request, staff_code):
         "staff_code": staff.staff_code,
         "staff_fname": staff.staff_fname,
         "staff_lname": staff.staff_lname,
+        "staff_title": staff.staff_title,
         "staff_department": staff.staff_department,
     }, status=200)
+
+
+def user_info(request):
+    users = User.objects.all().values()
+    template = loader.get_template('line_app/user_info.html')
+    context = {
+        'users': users,
+    }
+    return HttpResponse(template.render(context, request))
 
 
 @handler.add(FollowEvent)
