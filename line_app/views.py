@@ -6,12 +6,14 @@ from linebot.exceptions import InvalidSignatureError
 from django.contrib.auth.models import User
 from attendance_app.models import LeaveAttendance
 from line_app.models import UserProfile
+from user_app.models import User, BsnStaff
 from linebot.models import (
     MessageEvent, FollowEvent, PostbackEvent, TextMessage,
     PostbackAction, TemplateSendMessage, ButtonsTemplate, TextSendMessage
 )
 from django.shortcuts import render
 import json
+from django.http import JsonResponse
 
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(settings.LINE_CHANNEL_SECRET)
@@ -24,6 +26,23 @@ STATUS_DISPLAY = {
 
 
 def register(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        user_id = data.get("userID")
+        staff_code = data.get("staffCode")
+
+        # ค้นหาผู้อนุมัติจากตาราง BsnStaff
+        staff = BsnStaff.objects.filter(staff_code=staff_code).first()
+        if not staff:
+            return JsonResponse({"error": "Staff not found"}, status=404)
+
+        user = User.objects.filter(id=staff.django_usr_id)
+        if not user:
+            return JsonResponse({"error": "User not found"}, status=404)
+
+        user.uid = user_id
+        user.save()
+
     return render(request, 'line_app/register.html')
 
 

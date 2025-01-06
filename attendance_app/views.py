@@ -20,6 +20,7 @@ LEAVE_TYPE_DISPLAY = {
     'bereavement_leave': 'ลาไปงานศพ',
 }
 
+
 @csrf_exempt
 def leave_request_view(request):
     if request.method == "POST":
@@ -94,7 +95,7 @@ def leave_request_view(request):
                     user_id,
                     TextSendMessage(
                         text=f"คำขอการลา: {leave_record.id}\nกำลังรอการพิจารณา\nผู้อนุมัติ: {approver_fullname}"
-                                    )
+                    )
                 )
 
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)

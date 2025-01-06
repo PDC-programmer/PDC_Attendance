@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LINE Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- SweetAlert2 -->
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script>
@@ -34,9 +35,66 @@
                 }
             });
 
-            document.getElementById("submit-employee-code").addEventListener("click", () => {
-                const employeeCode = document.getElementById("employee-code").value;
-                alert(`รหัสพนักงาน: ${employeeCode}`); // Replace with your desired submission logic
+            document.getElementById("submit-staff-code").addEventListener("click", () => {
+                const userID = document.getElementById("user-id").value;
+                const staffCode = document.getElementById("staff-code").value;
+
+                // ตรวจสอบข้อมูล
+                if (!userID || !staffCode) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ข้อมูลไม่ครบถ้วน...',
+                        text: 'กรุณากรอกข้อมูลให้ครบถ้วน !',
+                    });
+                    return;
+                }
+
+                // Show loading alert
+                Swal.fire({
+                    title: 'กำลังบันทึกข้อมูล...',
+                    text: 'กรุณารอสักครู่...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                fetch("/line/register/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        userID: userId,
+                        staffCode
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    Swal.close(); // Close loading alert
+                    if (data.error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'เกิดข้อผิดพลาด',
+                            text: data.error,
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'เสร็จสมบูรณ์',
+                            text: 'บันทึกเสร็จสมบูรณ์ !',
+                        });
+                    }
+                })
+                .catch(error => {
+                    Swal.close(); // Close loading alert
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: 'ไม่สามารถบันทึกคำขอการลาได้ !',
+                    });
+                    console.error("Error:", error);
+                });
             });
         });
     </script>
@@ -56,10 +114,10 @@
                 <!-- Employee Code Input Form -->
                 <form class="mt-3">
                     <div class="mb-3">
-                        <label for="employee-code" class="form-label">รหัสพนักงาน (Employee Code)</label>
-                        <input type="text" class="form-control" id="employee-code" placeholder="Enter your Employee Code">
+                        <label for="staff-code" class="form-label">รหัสพนักงาน (Employee Code)</label>
+                        <input type="text" class="form-control" id="staff-code" placeholder="Enter your Employee Code">
                     </div>
-                    <button type="button" id="submit-employee-code" class="btn btn-primary">Submit</button>
+                    <button type="button" id="submit-staff-code" class="btn btn-primary">Submit</button>
                 </form>
 
                 <button id="logout-button" class="btn btn-danger mt-3">Logout</button>
