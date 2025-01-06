@@ -24,7 +24,7 @@ STATUS_DISPLAY = {
     'rejected': 'ปฏิเสธ',
 }
 
-
+@csrf_exempt
 def register(request):
     if request.method == "POST":
         data = json.loads(request.body)
