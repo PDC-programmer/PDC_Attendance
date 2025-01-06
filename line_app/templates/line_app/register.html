@@ -19,9 +19,69 @@
                         liff.getProfile()
                             .then(profile => {
                                 document.getElementById("user-name").textContent = profile.displayName;
-                                document.getElementById("user-id").textContent = profile.userId;
                                 document.getElementById("user-picture").src = profile.pictureUrl;
                                 document.getElementById("user-status").textContent = profile.statusMessage || "No status message.";
+                                const userId = profile.userId;
+                                document.getElementById("submit-staff-code").addEventListener("click", () => {
+                                    const staffCode = document.getElementById("staff-code").value;
+
+                                    // ตรวจสอบข้อมูล
+                                    if (!staffCode) {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'ข้อมูลไม่ครบถ้วน...',
+                                            text: 'กรุณากรอกข้อมูลให้ครบถ้วน !',
+                                        });
+                                        return;
+                                    }
+
+                                    // Show loading alert
+                                    Swal.fire({
+                                        title: 'กำลังบันทึกข้อมูล...',
+                                        text: 'กรุณารอสักครู่...',
+                                        allowOutsideClick: false,
+                                        didOpen: () => {
+                                            Swal.showLoading();
+                                        }
+                                    });
+
+                                    fetch("/line/register/", {
+                                        method: "POST",
+                                        headers: {
+                                            "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                            userID: userId,
+                                            staffCode
+                                        }),
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        Swal.close(); // Close loading alert
+                                        if (data.error) {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'เกิดข้อผิดพลาด',
+                                                text: data.error,
+                                            });
+                                        } else {
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'เสร็จสมบูรณ์',
+                                                text: 'บันทึกเสร็จสมบูรณ์ !',
+                                            });
+                                        }
+                                    })
+                                    .catch(error => {
+                                        Swal.close(); // Close loading alert
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'เกิดข้อผิดพลาด',
+                                            text: 'ไม่สามารถบันทึกคำขอการลาได้ !',
+                                        });
+                                        console.error("Error:", error);
+                                    });
+                                });
                             })
                             .catch(err => console.error("Error getting profile: ", err));
                     }
@@ -33,68 +93,6 @@
                     liff.logout();
                     window.location.reload();
                 }
-            });
-
-            document.getElementById("submit-staff-code").addEventListener("click", () => {
-                const userID = document.getElementById("user-id").value;
-                const staffCode = document.getElementById("staff-code").value;
-
-                // ตรวจสอบข้อมูล
-                if (!userID || !staffCode) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'ข้อมูลไม่ครบถ้วน...',
-                        text: 'กรุณากรอกข้อมูลให้ครบถ้วน !',
-                    });
-                    return;
-                }
-
-                // Show loading alert
-                Swal.fire({
-                    title: 'กำลังบันทึกข้อมูล...',
-                    text: 'กรุณารอสักครู่...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                fetch("/line/register/", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        userID: userId,
-                        staffCode
-                    }),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    Swal.close(); // Close loading alert
-                    if (data.error) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'เกิดข้อผิดพลาด',
-                            text: data.error,
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'เสร็จสมบูรณ์',
-                            text: 'บันทึกเสร็จสมบูรณ์ !',
-                        });
-                    }
-                })
-                .catch(error => {
-                    Swal.close(); // Close loading alert
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'เกิดข้อผิดพลาด',
-                        text: 'ไม่สามารถบันทึกคำขอการลาได้ !',
-                    });
-                    console.error("Error:", error);
-                });
             });
         });
     </script>
@@ -108,7 +106,6 @@
             <div class="card-body">
                 <img id="user-picture" class="rounded-circle mb-3" width="100" height="100" alt="User Profile Picture">
                 <h5 id="user-name" class="card-title">Loading...</h5>
-                <p id="user-id" class="card-text">Loading user ID...</p>
                 <p id="user-status" class="card-text">Loading status...</p>
 
                 <!-- Employee Code Input Form -->
