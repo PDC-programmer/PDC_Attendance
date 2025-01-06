@@ -41,6 +41,7 @@ def register(request):
             user = User.objects.get(id=django_usr_id)
             user.uid = user_id
             user.save()
+            return JsonResponse({"success": True, "message": "Registration successful."}, status=200)
         else:
             return JsonResponse({"error": "User not found"}, status=404)
 
