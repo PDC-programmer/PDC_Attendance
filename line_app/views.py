@@ -48,6 +48,18 @@ def register(request):
     return render(request, 'line_app/register.html')
 
 
+def get_staff_info(request, staff_code):
+    staff = BsnStaff.objects.filter(staff_code=staff_code).first()
+    if not staff:
+        return JsonResponse({"error": "ไม่พบข้อมูลพนักงาน"}, status=404)
+    return JsonResponse({
+        "staff_code": staff.staff_code,
+        "staff_fname": staff.staff_fname,
+        "staff_lname": staff.staff_lname,
+        "staff_department": staff.staff_department,
+    }, status=200)
+
+
 @handler.add(FollowEvent)
 def handle_follow(event):
     try:
