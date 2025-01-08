@@ -23,6 +23,40 @@ def get_leave_types(request):
     return JsonResponse(data, safe=False)
 
 
+def get_leave_balances(request, user_id):
+    # ค้นหา User ที่มี UID ตรงกับ userID
+    user = User.objects.filter(uid=user_id).first()
+    if not user:
+        return JsonResponse({"error": "User not found"}, status=404)
+
+    # ดึงข้อมูลประเภทการลา
+    leave_balances = LeaveBalance.objects.filter(user=user)
+    data = [{"user": leave.user,
+             "leave_type": leave.leave_type.th_name,
+             "total_days": leave.total_days,
+             "remaining_days": leave.remaining_days
+             } for leave in leave_balances]
+    return JsonResponse(data, safe=False)
+
+
+def get_staff(request, user_id):
+    # ค้นหา User ที่มี UID ตรงกับ userID
+    user = User.objects.filter(uid=user_id).first()
+    if not user:
+        return JsonResponse({"error": "User not found"}, status=404)
+
+    staff = BsnStaff.objects.filter(django_usr_id=user).first()
+    if not staff:
+        return JsonResponse({"error": "ไม่พบข้อมูลพนักงาน"}, status=404)
+    return JsonResponse({
+        "staff_code": staff.staff_code,
+        "staff_fname": staff.staff_fname,
+        "staff_lname": staff.staff_lname,
+        "staff_title": staff.staff_title,
+        "staff_department": staff.staff_department,
+    }, status=200)
+
+
 @csrf_exempt
 def leave_request_view(request):
     if request.method == "POST":
@@ -53,6 +87,10 @@ def leave_request_view(request):
         if not approver_user:
             return JsonResponse({"error": "Approver user not found"}, status=404)
 
+        leave_balance = LeaveBalance.objects.filter(user=user).first()
+        if not leave_balance:
+            return JsonResponse({"error": "Leave balance not found"}, status=404)
+
         # สร้าง LeaveAttendance
         leave_record = LeaveAttendance.objects.create(
             user=user,
@@ -75,7 +113,7 @@ def leave_request_view(request):
                         alt_text=f"คำขอการลาของ {user_fullname}",
                         template=ButtonsTemplate(
                             title=f"คำขอการลาของ {user_fullname}",
-                            text=f"ประเภท: {leave_type.th_name}\nวันที่: {start_date} - {end_date}",
+                            text=f"ประเภท: {leave_type.th_name}\nวันที่: {start_date} - {end_date}\nสิทธิ์คงเหลือ: {leave_balance.remaining_days} วัน",
                             actions=[
                                 PostbackAction(
                                     label="อนุมัติ",
