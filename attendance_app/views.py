@@ -86,7 +86,7 @@ def leave_request_view(request):
         if not approver_user:
             return JsonResponse({"error": "Approver user not found"}, status=404)
 
-        leave_balance = LeaveBalance.objects.filter(user=user).first()
+        leave_balance = LeaveBalance.objects.filter(user=user, leave_type=leave_type_id).first()
         if not leave_balance:
             return JsonResponse({"error": "Leave balance not found"}, status=404)
 
