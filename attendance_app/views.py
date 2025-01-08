@@ -152,6 +152,7 @@ def leave_request_view(request):
             user = User.objects.filter(uid=request.GET.get("userID")).first()
             if user:
                 staff = BsnStaff.objects.filter(django_usr_id=user).first()
+                leave_balances = LeaveBalance.objects.filter(user=user)
 
         context = {
             "leave_types": leave_types_data,
@@ -162,6 +163,14 @@ def leave_request_view(request):
                 "staff_department": staff.staff_department if staff else "N/A",
                 "staff_code": staff.staff_code if staff else "N/A",
             } if staff else None,
+            "leave_balances": [
+                {
+                    "leave_type": balance.leave_type.th_name,
+                    "total_days": balance.total_days,
+                    "remaining_days": balance.remaining_days,
+                }
+                for balance in leave_balances
+            ],
         }
 
         return render(request, "attendance/leave_request.html", context)
