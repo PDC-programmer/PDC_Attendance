@@ -142,5 +142,28 @@ def leave_request_view(request):
                 )
 
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
+    elif request.method == "GET":
+        # Prepare context data
+        leave_types = LeaveType.objects.all()
+        leave_types_data = [{"id": leave.id, "th_name": leave.th_name, "description": leave.description} for leave in leave_types]
 
-    return render(request, "attendance/leave_request.html")
+        staff = None
+        if request.GET.get("userID"):
+            user = User.objects.filter(uid=request.GET.get("userID")).first()
+            if user:
+                staff = BsnStaff.objects.filter(django_usr_id=user).first()
+
+        context = {
+            "leave_types": leave_types_data,
+            "staff": {
+                "staff_fname": staff.staff_fname if staff else "N/A",
+                "staff_lname": staff.staff_lname if staff else "N/A",
+                "staff_title": staff.staff_title if staff else "N/A",
+                "staff_department": staff.staff_department if staff else "N/A",
+                "staff_code": staff.staff_code if staff else "N/A",
+            } if staff else None,
+        }
+
+        return render(request, "attendance/leave_request.html", context)
+
+    # return render(request, "attendance/leave_request.html")
