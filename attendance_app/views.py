@@ -65,12 +65,14 @@ def leave_request_view(request):
 
         staff = None
         leave_balances = []  # Initialize with an empty list to avoid UnboundLocalError
+        leave_attendances = []  # Initialize with an empty list to avoid UnboundLocalError
 
         if request.GET.get("userID"):
             user = User.objects.filter(uid=request.GET.get("userID")).first()
             if user:
                 staff = BsnStaff.objects.filter(django_usr_id=user).first()
                 leave_balances = LeaveBalance.objects.filter(user=user)
+                leave_attendances = LeaveAttendance.objects.filter(user=user)
 
         context = {
             "leave_types": leave_types_data,
@@ -88,6 +90,15 @@ def leave_request_view(request):
                     "remaining_days": balance.remaining_days,
                 }
                 for balance in leave_balances
+            ],
+            "leave_attendances": [
+                {
+                    "start_date": attendance.start_date,
+                    "end_date": attendance.end_date,
+                    "reason": attendance.reason,
+                    "status": attendance.status,
+                }
+                for attendance in leave_attendances
             ],
         }
     if request.method == "POST":
