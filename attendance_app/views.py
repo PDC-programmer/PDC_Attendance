@@ -113,7 +113,7 @@ def leave_request_view(request):
                         alt_text=f"คำขอการลาของ {user_fullname}",
                         template=ButtonsTemplate(
                             title=f"คำขอการลาของ {user_fullname}",
-                            text=f"ประเภท: {leave_type.th_name}\nวันที่: {start_date} - {end_date}\nสิทธิ์คงเหลือ: {leave_balance.remaining_days} วัน",
+                            text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
                             actions=[
                                 PostbackAction(
                                     label="อนุมัติ",
