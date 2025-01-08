@@ -84,7 +84,10 @@
                         liff.getProfile()
                             .then(profile => {
                                 const userId = profile.userId;
-                                window.location.href = `/attendance/leave-request/?userID=${userId}`;
+                                // Redirect to include userID in URL
+                                if (!window.location.search.includes("userID")) {
+                                    window.location.href = `/attendance/leave-request/?userID=${userId}`;
+                                }
 
                                 document.getElementById("submit-request").addEventListener("click", () => {
                                     const startDate = document.getElementById("start-date").value;
