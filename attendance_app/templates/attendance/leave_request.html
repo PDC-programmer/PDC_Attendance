@@ -76,10 +76,10 @@
                                 title: 'เกิดข้อผิดพลาด',
                                 text: data.error,
                             });
-                        } else {staff_code
+                        } else {
                             document.getElementById("employee-name").textContent = `${data.staff_fname} ${data.staff_lname}`;
                             document.getElementById("employee-title").textContent = `${data.staff_title}`;
-                            document.getElementById("employee-department").textContent = data.staff_department || "N/A";
+                            document.getElementById("employee-department").textContent = `${data.staff_department}`;
                             document.getElementById("employee-staff_code").textContent = `${data.staff_code}`;
                         }
                     })
