@@ -30,9 +30,8 @@ def get_leave_balances(request, user_id):
         return JsonResponse({"error": "User not found"}, status=404)
 
     # ดึงข้อมูลประเภทการลา
-    leave_balances = LeaveBalance.objects.filter(user=user).first()
-    data = [{"user": leave.user,
-             "leave_type": leave.leave_type.th_name,
+    leave_balances = LeaveBalance.objects.filter(user=user)
+    data = [{"leave_type": leave.leave_type.th_name,
              "total_days": leave.total_days,
              "remaining_days": leave.remaining_days
              } for leave in leave_balances]
