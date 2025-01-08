@@ -146,6 +146,10 @@
                             .then(profile => {
                                 const userId = profile.userId;
 
+                                // โหลดข้อมูลพนักงานและวันลาคงเหลือ
+                                loadEmployeeData(userId);
+                                loadLeaveBalances(userId);
+
                                 document.getElementById("submit-request").addEventListener("click", () => {
                                     const startDate = document.getElementById("start-date").value;
                                     const endDate = document.getElementById("end-date").value;
