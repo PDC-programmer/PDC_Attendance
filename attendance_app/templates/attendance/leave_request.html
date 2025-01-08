@@ -76,78 +76,6 @@
         document.addEventListener("DOMContentLoaded", function () {
             const liffId = "2006739665-RZxk3YVm"; // Replace with your LIFF ID
 
-<!--            // ฟังก์ชันโหลดข้อมูลพนักงาน-->
-<!--            function loadEmployeeData(userId) {-->
-<!--                fetch(`/attendance/get-staff/${userId}/`)-->
-<!--                    .then(response => response.json())-->
-<!--                    .then(data => {-->
-<!--                        if (data.error) {-->
-<!--                            Swal.fire({-->
-<!--                                icon: 'error',-->
-<!--                                title: 'เกิดข้อผิดพลาด',-->
-<!--                                text: data.error,-->
-<!--                            });-->
-<!--                        } else {-->
-<!--                            document.getElementById("employee-name").textContent = `${data.staff_fname} ${data.staff_lname}`;-->
-<!--                            document.getElementById("employee-title").textContent = `${data.staff_title}`;-->
-<!--                            document.getElementById("employee-department").textContent = data.staff_department || "N/A";-->
-<!--                            document.getElementById("employee-staff_code").textContent = `${data.staff_code}`;-->
-<!--                        }-->
-<!--                    })-->
-<!--                    .catch(error => {-->
-<!--                        console.error("Error fetching employee data:", error);-->
-<!--                    });-->
-<!--            }-->
-
-<!--            // ฟังก์ชันโหลดจำนวนวันลาคงเหลือ-->
-<!--            function loadLeaveBalances(userId) {-->
-<!--                fetch(`/attendance/get-leave-balances/${userId}/`)-->
-<!--                    .then(response => response.json())-->
-<!--                    .then(data => {-->
-<!--                        const tableBody = document.getElementById("leave-balance-table");-->
-<!--                        tableBody.innerHTML = ""; // ล้างตารางเก่า-->
-<!--                        data.forEach(balance => {-->
-<!--                            const row = document.createElement("tr");-->
-<!--                            row.innerHTML = `-->
-<!--                                <td>${balance.leave_type}</td>-->
-<!--                                <td>${balance.total_days}</td>-->
-<!--                                <td>${balance.remaining_days}</td>-->
-<!--                            `;-->
-<!--                            tableBody.appendChild(row);-->
-<!--                        });-->
-<!--                    })-->
-<!--                    .catch(error => {-->
-<!--                        console.error("Error fetching leave balances:", error);-->
-<!--                        document.getElementById("leave-balance-table").innerHTML = `-->
-<!--                            <tr>-->
-<!--                                <td colspan="3" class="text-center">Error loading data</td>-->
-<!--                            </tr>-->
-<!--                        `;-->
-<!--                    });-->
-<!--            }-->
-
-<!--            // ดึงข้อมูลประเภทการลาจากเซิร์ฟเวอร์-->
-<!--            fetch("/attendance/get-leave-types/")-->
-<!--                .then(response => response.json())-->
-<!--                .then(data => {-->
-<!--                    const leaveTypeSelect = document.getElementById("leave-type");-->
-<!--                    leaveTypeSelect.innerHTML = ""; // ล้างตัวเลือกเก่า-->
-<!--                    data.forEach(type => {-->
-<!--                        const option = document.createElement("option");-->
-<!--                        option.value = type.id;-->
-<!--                        option.textContent = type.th_name;-->
-<!--                        leaveTypeSelect.appendChild(option);-->
-<!--                    });-->
-<!--                })-->
-<!--                .catch(error => {-->
-<!--                    console.error("Error fetching leave types:", error);-->
-<!--                    Swal.fire({-->
-<!--                        icon: 'error',-->
-<!--                        title: 'เกิดข้อผิดพลาด',-->
-<!--                        text: 'ไม่สามารถโหลดประเภทการลาได้ !',-->
-<!--                    });-->
-<!--                });-->
-
             liff.init({ liffId })
                 .then(() => {
                     if (!liff.isLoggedIn()) {
@@ -156,10 +84,6 @@
                         liff.getProfile()
                             .then(profile => {
                                 const userId = profile.userId;
-
-<!--                                // โหลดข้อมูลพนักงานและวันลาคงเหลือ-->
-<!--                                loadEmployeeData(userId);-->
-<!--                                loadLeaveBalances(userId);-->
 
                                 document.getElementById("submit-request").addEventListener("click", () => {
                                     const startDate = document.getElementById("start-date").value;
