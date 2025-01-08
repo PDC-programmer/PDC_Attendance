@@ -142,39 +142,39 @@ def leave_request_view(request):
                 )
 
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
-    elif request.method == "GET":
-        # Prepare context data
-        leave_types = LeaveType.objects.all()
-        leave_types_data = [{"id": leave.id, "th_name": leave.th_name, "description": leave.description} for leave in leave_types]
 
-        staff = None
-        leave_balances = []  # Initialize with an empty list to avoid UnboundLocalError
-        
-        if request.GET.get("userID"):
-            user = User.objects.filter(uid=request.GET.get("userID")).first()
-            if user:
-                staff = BsnStaff.objects.filter(django_usr_id=user).first()
-                leave_balances = LeaveBalance.objects.filter(user=user)
+    # Prepare context data
+    leave_types = LeaveType.objects.all()
+    leave_types_data = [{"id": leave.id, "th_name": leave.th_name, "description": leave.description} for leave in leave_types]
 
-        context = {
-            "leave_types": leave_types_data,
-            "staff": {
-                "staff_fname": staff.staff_fname if staff else "N/A",
-                "staff_lname": staff.staff_lname if staff else "N/A",
-                "staff_title": staff.staff_title if staff else "N/A",
-                "staff_department": staff.staff_department if staff else "N/A",
-                "staff_code": staff.staff_code if staff else "N/A",
-            } if staff else None,
-            "leave_balances": [
-                {
-                    "leave_type": balance.leave_type.th_name,
-                    "total_days": balance.total_days,
-                    "remaining_days": balance.remaining_days,
-                }
-                for balance in leave_balances
-            ],
-        }
+    staff = None
+    leave_balances = []  # Initialize with an empty list to avoid UnboundLocalError
 
-        return render(request, "attendance/leave_request.html", context)
+    if request.GET.get("userID"):
+        user = User.objects.filter(uid=request.GET.get("userID")).first()
+        if user:
+            staff = BsnStaff.objects.filter(django_usr_id=user).first()
+            leave_balances = LeaveBalance.objects.filter(user=user)
+
+    context = {
+        "leave_types": leave_types_data,
+        "staff": {
+            "staff_fname": staff.staff_fname if staff else "N/A",
+            "staff_lname": staff.staff_lname if staff else "N/A",
+            "staff_title": staff.staff_title if staff else "N/A",
+            "staff_department": staff.staff_department if staff else "N/A",
+            "staff_code": staff.staff_code if staff else "N/A",
+        } if staff else None,
+        "leave_balances": [
+            {
+                "leave_type": balance.leave_type.th_name,
+                "total_days": balance.total_days,
+                "remaining_days": balance.remaining_days,
+            }
+            for balance in leave_balances
+        ],
+    }
+
+    return render(request, "attendance/leave_request.html", context)
 
     # return render(request, "attendance/leave_request.html")
