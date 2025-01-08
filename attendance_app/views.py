@@ -148,6 +148,8 @@ def leave_request_view(request):
         leave_types_data = [{"id": leave.id, "th_name": leave.th_name, "description": leave.description} for leave in leave_types]
 
         staff = None
+        leave_balances = []  # Initialize with an empty list to avoid UnboundLocalError
+        
         if request.GET.get("userID"):
             user = User.objects.filter(uid=request.GET.get("userID")).first()
             if user:
