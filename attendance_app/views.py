@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from user_app.models import User, BsnStaff
-from attendance_app.models import LeaveAttendance
+from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveType
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.conf import settings
@@ -11,14 +11,16 @@ from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction,
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
 
-# Mapping for leave type display names
-LEAVE_TYPE_DISPLAY = {
-    'sick_leave': 'ลาป่วย',
-    'annual_leave': 'ลาพักร้อน',
-    'absence_leave': 'ลากิจ',
-    'maternity_leave': 'ลาคลอด',
-    'bereavement_leave': 'ลาไปงานศพ',
-}
+
+def get_leave_types(request):
+    # ดึงข้อมูลประเภทการลา
+    leave_types = LeaveType.objects.all()
+    data = [{"id": leave.id,
+             "th_name": leave.th_name,
+             "en_name": leave.en_name,
+             "description": leave.description
+             } for leave in leave_types]
+    return JsonResponse(data, safe=False)
 
 
 @csrf_exempt
@@ -29,7 +31,12 @@ def leave_request_view(request):
         start_date = data.get("startDate")
         end_date = data.get("endDate")
         reason = data.get("reason")
-        leave_type = data.get("type")
+        leave_type_id = data.get("type")
+
+        # ตรวจสอบว่าประเภทการลามีอยู่ในระบบ
+        leave_type = LeaveType.objects.filter(id=leave_type_id).first()
+        if not leave_type:
+            return JsonResponse({"error": "Invalid leave type"}, status=400)
 
         # ค้นหา User ที่มี UID ตรงกับ userID
         user = User.objects.filter(uid=user_id).first()
@@ -53,12 +60,11 @@ def leave_request_view(request):
             start_date=start_date,
             end_date=end_date,
             reason=reason,
-            type=leave_type,
+            leave_type=leave_type,
         )
 
         # ส่ง Template Message ถึง Approver
         if approver_user.uid:
-            leave_type_display = LEAVE_TYPE_DISPLAY.get(leave_type, "Unknown Leave Type")
             user_fullname = f"{staff.staff_fname} {staff.staff_lname}" if staff.staff_fname and staff.staff_lname else user.username
             approver_fullname = f"{approver.staff_fname} {approver.staff_lname}" if approver.staff_fname and approver.staff_lname else approver_user.username
 
@@ -69,7 +75,7 @@ def leave_request_view(request):
                         alt_text=f"คำขอการลาของ {user_fullname}",
                         template=ButtonsTemplate(
                             title=f"คำขอการลาของ {user_fullname}",
-                            text=f"ประเภท: {leave_type_display}\nวันที่: {start_date} - {end_date}",
+                            text=f"ประเภท: {leave_type.th_name}\nวันที่: {start_date} - {end_date}",
                             actions=[
                                 PostbackAction(
                                     label="อนุมัติ",
