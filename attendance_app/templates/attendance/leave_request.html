@@ -47,6 +47,33 @@
             </table>
         </div>
 
+        <h4>คำขออนุมัติ</h4>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ลาวันที่</th>
+                        <th>ถึงวันที่</th>
+                        <th>เหตุผล</th>
+                        <th>สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in leave_attendances %}
+                    <tr>
+                        <td>{{ attendance.start_date }}</td>
+                        <td>{{ attendance.end_date }}</td>
+                        <td>{{ attendance.reason }}</td>
+                        <td>{{ attendance.status }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center">ไม่มีข้อมูลคำขออนุมัติ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
         <!-- ฟอร์มคำขอการลา -->
         <div class="mb-3">
             <label for="start-date" class="form-label">เริ่มวันที่</label>
@@ -69,7 +96,7 @@
             <label for="reason" class="form-label">เหตุผล</label>
             <textarea class="form-control" id="reason" rows="3"></textarea>
         </div>
-        <button id="submit-request" class="btn btn-primary w-100">ยืนยัน</button>
+        <button id="submit-request" class="btn btn-primary w-100 my-4">ยืนยัน</button>
     </div>
 
     <script>
@@ -152,6 +179,8 @@
                                                 icon: 'success',
                                                 title: 'เสร็จสมบูรณ์',
                                                 text: 'บันทึกเสร็จสมบูรณ์ !',
+                                            }).then(function() {
+                                            window.location.href = "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-request/";
                                             });
                                         }
                                     })
