@@ -22,11 +22,7 @@
         <div class="mb-3">
             <label for="leave-type" class="form-label">ประเภทการลา</label>
             <select class="form-select" id="leave-type">
-                <option value="sick_leave">ลาป่วย</option>
-                <option value="annual_leave">ลาพักร้อน</option>
-                <option value="absence_leave">ลากิจ</option>
-                <option value="maternity_leave">ลาคลอด</option>
-                <option value="bereavement_leave">ลาไปงานศพ</option>
+                <option value="">Loading...</option>
             </select>
         </div>
         <div class="mb-3">
@@ -39,6 +35,28 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const liffId = "2006739665-RZxk3YVm"; // Replace with your LIFF ID
+
+                        // ดึงข้อมูลประเภทการลาจากเซิร์ฟเวอร์
+            fetch("/attendance/get-leave-types/")
+                .then(response => response.json())
+                .then(data => {
+                    const leaveTypeSelect = document.getElementById("leave-type");
+                    leaveTypeSelect.innerHTML = ""; // ล้างตัวเลือกเก่า
+                    data.forEach(type => {
+                        const option = document.createElement("option");
+                        option.value = type.id;
+                        option.textContent = type.th_name;
+                        leaveTypeSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error fetching leave types:", error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: 'ไม่สามารถโหลดประเภทการลาได้ !',
+                    });
+                });
 
             liff.init({ liffId })
                 .then(() => {
