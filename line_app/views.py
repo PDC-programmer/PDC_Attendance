@@ -41,7 +41,7 @@ def register(request):
         if not django_usr_id:
             return JsonResponse({"error": "User not found"}, status=404)
         else:
-            user = User.objects.get(id=django_usr_id)
+            user = User.objects.get(id=django_usr_id.id)
             user.uid = user_id
             user.save()
             return JsonResponse({"success": True, "message": "Registration successful."}, status=200)
