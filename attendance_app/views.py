@@ -75,10 +75,13 @@ def get_leave_attendances(request, user_id):
     # else:
     #     approver_name = attendance.approve_user.username if attendance.approve_user else "N/A"
 
-    data = [{"start_date": leave.start_date,
+    data = [{"id": leave.id,
+             "start_date": leave.start_date,
              "end_date": leave.end_date,
+             "leave_type": leave.leave_type.th_name,
              "reason": leave.reason,
              "status": leave.status,
+             # "image": leave.image,
              } for leave in leave_attendances]
     return JsonResponse(data, safe=False)
 
