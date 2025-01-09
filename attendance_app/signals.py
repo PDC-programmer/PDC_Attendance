@@ -1,6 +1,7 @@
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from .models import LeaveAttendance, LeaveBalance
+from datetime import datetime
 
 
 @receiver(pre_save, sender=LeaveAttendance)
@@ -22,7 +23,7 @@ def update_leave_balance(sender, instance, **kwargs):
     """
     ปรับปรุง LeaveBalance ตามสถานะใหม่
     """
-    num_days = (instance.end_date - instance.start_date).days + 1
+    num_days = (datetime.strptime(instance.end_date, "%Y-%m-%d") - datetime.strptime(instance.start_date, "%Y-%m-%d")).days + 1
 
     # ค้นหา LeaveBalance ที่เกี่ยวข้อง
     leave_balance = LeaveBalance.objects.filter(user=instance.user, leave_type=instance.leave_type).first()

@@ -7,6 +7,7 @@ import json
 from django.conf import settings
 from linebot import LineBotApi
 from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction, TextSendMessage
+from datetime import datetime
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -96,29 +97,34 @@ def leave_request_view(request):
         reason = data.get("reason")
         leave_type_id = data.get("type")
 
+        days = (datetime.strptime(end_date, "%Y-%m-%d") - datetime.strptime(start_date, "%Y-%m-%d")).days + 1
+
         # ตรวจสอบว่าประเภทการลามีอยู่ในระบบ
         leave_type = LeaveType.objects.filter(id=leave_type_id).first()
         if not leave_type:
-            return JsonResponse({"error": "Invalid leave type"}, status=400)
+            return JsonResponse({"error": "ประเภทวันลาไม่ถูกต้อง !"}, status=400)
 
         # ค้นหา User ที่มี UID ตรงกับ userID
         user = User.objects.filter(uid=user_id).first()
         if not user:
-            return JsonResponse({"error": "User not found"}, status=404)
+            return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ !"}, status=404)
+
+        leave_balance = LeaveBalance.objects.filter(user=user, leave_type=leave_type_id).first()
+        if not leave_balance:
+            return JsonResponse({"error": "ไม่พบข้อมูสิทธิ์วันลาคงเหลือ !"}, status=404)
+
+        if not leave_balance.remaining_days >= days:
+            return JsonResponse({"error": f"{leave_type.th_name}เหลือไม่เพียงพอ !"}, status=404)
 
         # ค้นหาผู้อนุมัติจากตาราง BsnStaff
         staff = BsnStaff.objects.filter(django_usr_id=user).first()
         if not staff or not staff.mng_staff_id:
-            return JsonResponse({"error": "Approver not found"}, status=404)
+            return JsonResponse({"error": "ไม่พบผู้อนุมัติของพนักงาน !"}, status=404)
 
         approver = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
         approver_user = User.objects.filter(id=approver.django_usr_id.id).first()
         if not approver_user:
-            return JsonResponse({"error": "Approver user not found"}, status=404)
-
-        leave_balance = LeaveBalance.objects.filter(user=user, leave_type=leave_type_id).first()
-        if not leave_balance:
-            return JsonResponse({"error": "Leave balance not found"}, status=404)
+            return JsonResponse({"error": "ไม่พบผู้อนุมัติ !"}, status=404)
 
         # สร้าง LeaveAttendance
         leave_record = LeaveAttendance.objects.create(
@@ -162,7 +168,7 @@ def leave_request_view(request):
                 return JsonResponse({"error": f"Failed to send message: {str(e)}"}, status=500)
 
             if not user:
-                return JsonResponse({"error": "User not found"}, status=404)
+                return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ"}, status=404)
             else:
                 line_bot_api.push_message(
                     user_id,
@@ -173,4 +179,4 @@ def leave_request_view(request):
 
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
 
-    return render(request, "attendance/leave_request.html")
+    return render(request, "attendance/leave_request_test.html")
