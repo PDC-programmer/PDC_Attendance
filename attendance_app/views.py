@@ -179,4 +179,4 @@ def leave_request_view(request):
 
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
 
-    return render(request, "attendance/leave_request_test.html")
+    return render(request, "attendance/leave_request.html")
