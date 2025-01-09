@@ -39,9 +39,9 @@
             </table>
         </div>
 
-                <!-- ตารางจำนวนวันลาคงเหลือ -->
+        <!-- ตารางคำขออนุมัติ -->
         <div class="mb-3">
-            <h4>จำนวนวันลาคงเหลือ</h4>
+            <h4>คำขออนุมัติของคุณ</h4>
             <table class="table table-bordered">
                 <thead>
                     <tr>
@@ -79,7 +79,7 @@
             <label for="reason" class="form-label">เหตุผล</label>
             <textarea class="form-control" id="reason" rows="3"></textarea>
         </div>
-        <button id="submit-request" class="btn btn-primary w-100">ยืนยัน</button>
+        <button id="submit-request" class="btn btn-primary w-100 mb-3">ยืนยัน</button>
     </div>
 
     <script>
@@ -199,7 +199,7 @@
                                 // โหลดข้อมูลพนักงานและวันลาคงเหลือ
                                 loadEmployeeData(userId);
                                 loadLeaveBalances(userId);
-                                loadLeaveBalances(userId);
+                                loadLeaveAttendances(userId);
 
                                 document.getElementById("submit-request").addEventListener("click", () => {
                                     const startDate = document.getElementById("start-date").value;
