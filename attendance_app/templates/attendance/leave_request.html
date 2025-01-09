@@ -54,7 +54,7 @@
                 </thead>
                 <tbody id="leave-attendance-table">
                     <tr>
-                        <td colspan="3" class="text-center">Loading...</td>
+                        <td colspan="4" class="text-center">Loading...</td>
                     </tr>
                 </tbody>
             </table>
@@ -159,7 +159,7 @@
                         console.error("Error fetching leave attendances:", error);
                         document.getElementById("leave-attendance-table").innerHTML = `
                             <tr>
-                                <td colspan="3" class="text-center">Error loading data</td>
+                                <td colspan="4" class="text-center">Error loading data</td>
                             </tr>
                         `;
                     });
