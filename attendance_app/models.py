@@ -36,18 +36,3 @@ class LeaveBalance(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.leave_type.th_name}: {self.remaining_days} days remaining"
-
-    def calculate_leave_balance(self):
-        attendance = LeaveAttendance.objects.filter(
-            user=self.user,
-            status='approved',
-            leave_type=self.leave_type,
-        )
-
-        leave_days = (attendance.end_date - attendance.start_date).days + 1
-
-    def save(self, *args, **kwargs):
-        self.remaining_days = self.calculate_leave_balance()
-        super().save(*args, **kwargs)
-
-        LeaveBalance.objects.filter(user=self.user).update(remaining_days=self.remaining_days)
