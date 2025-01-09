@@ -56,6 +56,24 @@ def get_staff(request, user_id):
     }, status=200)
 
 
+def get_leave_attendances(request, user_id):
+    # ค้นหา User ที่มี UID ตรงกับ userID
+    user = User.objects.filter(uid=user_id).first()
+    if not user:
+        return JsonResponse({"error": "User not found"}, status=404)
+
+    attendance = LeaveAttendance.objects.filter(user=user).first()
+    if not attendance:
+        return JsonResponse({"error": "ไม่พบข้อมูลคำขออนุมัติ"}, status=404)
+    return JsonResponse({
+        "start_date": attendance.start_date,
+        "end_date": attendance.end_date,
+        "reason": attendance.reason,
+        "approve_user": attendance.approve_user,
+        "status": attendance.status,
+    }, status=200)
+
+
 @csrf_exempt
 def leave_request_view(request):
     if request.method == "POST":
@@ -142,50 +160,5 @@ def leave_request_view(request):
                 )
 
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
-        pass
-    if request.method == "GET" and "userID" in request.GET:
-        user_id = request.GET.get("userID")
-        user = User.objects.filter(uid=user_id).first()
-        if not user:
-            return JsonResponse({"error": "User not found"}, status=404)
 
-        # Fetch staff info
-        staff = BsnStaff.objects.filter(django_usr_id=user).first()
-        staff_data = {
-            "staff_fname": staff.staff_fname if staff else "N/A",
-            "staff_lname": staff.staff_lname if staff else "N/A",
-            "staff_title": staff.staff_title if staff else "N/A",
-            "staff_department": staff.staff_department if staff else "N/A",
-            "staff_code": staff.staff_code if staff else "N/A",
-        }
-
-        # Fetch leave balances
-        leave_balances = LeaveBalance.objects.filter(user=user)
-        leave_balance_data = [
-            {
-                "leave_type": balance.leave_type.th_name,
-                "total_days": balance.total_days,
-                "remaining_days": balance.remaining_days,
-            }
-            for balance in leave_balances
-        ]
-
-        # Fetch leave attendance
-        leave_attendances = LeaveAttendance.objects.filter(user=user)
-        leave_attendance_data = [
-            {
-                "start_date": attendance.start_date,
-                "end_date": attendance.end_date,
-                "reason": attendance.reason,
-                "status": attendance.status,
-            }
-            for attendance in leave_attendances
-        ]
-
-        return JsonResponse({
-            "staff": staff_data,
-            "leave_balances": leave_balance_data,
-            "leave_attendances": leave_attendance_data,
-        })
-
-    return JsonResponse({"error": "Invalid request"}, status=400)
+    return render(request, "attendance/leave_request.html")

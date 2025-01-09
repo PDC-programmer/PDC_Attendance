@@ -11,16 +11,16 @@
 <body>
     <div class="container mt-5">
         <h1 class="text-center">คำขอการลา</h1>
-        <!-- Staff Information -->
+        <!-- ข้อมูลพนักงาน -->
         <div class="mb-3">
             <h4>ข้อมูลพนักงาน</h4>
-            <p><strong>ชื่อ:</strong> <span id="staff-name">Loading...</span></p>
-            <p><strong>ตำแหน่ง:</strong> <span id="staff-title">Loading...</span></p>
-            <p><strong>แผนก:</strong> <span id="staff-department">Loading...</span></p>
-            <p><strong>รหัสพนักงาน:</strong> <span id="staff-code">Loading...</span></p>
+            <p><strong>ชื่อ:</strong> <span id="employee-name">Loading...</span></p>
+            <p><strong>ตำแหน่ง:</strong> <span id="employee-title">Loading...</span></p>
+            <p><strong>แผนก:</strong> <span id="employee-department">Loading...</span></p>
+            <p><strong>รหัสพนักงาน:</strong> <span id="employee-staff_code">Loading...</span></p>
         </div>
 
-        <!-- Leave Balances -->
+        <!-- ตารางจำนวนวันลาคงเหลือ -->
         <div class="mb-3">
             <h4>จำนวนวันลาคงเหลือ</h4>
             <table class="table table-bordered">
@@ -38,15 +38,17 @@
                 </tbody>
             </table>
         </div>
-        <!-- Leave Balances -->
+
+                <!-- ตารางจำนวนวันลาคงเหลือ -->
         <div class="mb-3">
-            <h4>คำขออนุมัติ</h4>
+            <h4>จำนวนวันลาคงเหลือ</h4>
             <table class="table table-bordered">
                 <thead>
                     <tr>
-                        <th>ลาวันที่</th>
+                        <th>วันที่เริ่มลา</th>
                         <th>ถึงวันที่</th>
                         <th>เหตุผล</th>
+                        <th>ผู้อนุมัติ</th>
                         <th>สถานะ</th>
                     </tr>
                 </thead>
@@ -67,25 +69,123 @@
             <label for="end-date" class="form-label">ถึงวันที่</label>
             <input type="date" class="form-control" id="end-date">
         </div>
-        <!-- Leave Types -->
         <div class="mb-3">
             <label for="leave-type" class="form-label">ประเภทการลา</label>
             <select class="form-select" id="leave-type">
-                {% for leave in leave_types %}
-                <option value="{{ leave.id }}">{{ leave.th_name }}</option>
-                {% endfor %}
+                <option value="">Loading...</option>
             </select>
         </div>
         <div class="mb-3">
             <label for="reason" class="form-label">เหตุผล</label>
             <textarea class="form-control" id="reason" rows="3"></textarea>
         </div>
-        <button id="submit-request" class="btn btn-primary w-100 my-4">ยืนยัน</button>
+        <button id="submit-request" class="btn btn-primary w-100">ยืนยัน</button>
     </div>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const liffId = "2006739665-RZxk3YVm"; // Replace with your LIFF ID
+
+            // ฟังก์ชันโหลดข้อมูลพนักงาน
+            function loadEmployeeData(userId) {
+                fetch(`/attendance/get-staff/${userId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'เกิดข้อผิดพลาด',
+                                text: data.error,
+                            });
+                        } else {
+                            document.getElementById("employee-name").textContent = `${data.staff_fname} ${data.staff_lname}`;
+                            document.getElementById("employee-title").textContent = `${data.staff_title}`;
+                            document.getElementById("employee-department").textContent = data.staff_department || "N/A";
+                            document.getElementById("employee-staff_code").textContent = `${data.staff_code}`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching employee data:", error);
+                    });
+            }
+
+            // ฟังก์ชันโหลดจำนวนวันลาคงเหลือ
+            function loadLeaveBalances(userId) {
+                fetch(`/attendance/get-leave-balances/${userId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const tableBody = document.getElementById("leave-balance-table");
+                        tableBody.innerHTML = ""; // ล้างตารางเก่า
+                        data.forEach(balance => {
+                            const row = document.createElement("tr");
+                            row.innerHTML = `
+                                <td>${balance.leave_type}</td>
+                                <td>${balance.total_days}</td>
+                                <td>${balance.remaining_days}</td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error fetching leave balances:", error);
+                        document.getElementById("leave-balance-table").innerHTML = `
+                            <tr>
+                                <td colspan="3" class="text-center">Error loading data</td>
+                            </tr>
+                        `;
+                    });
+            }
+
+            // ฟังก์ชันโหลดจำนวนวันลาคงเหลือ
+            function loadLeaveAttendances(userId) {
+                fetch(`/attendance/get-leave-attendances/${userId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const tableBody = document.getElementById("leave-attendance-table");
+                        tableBody.innerHTML = ""; // ล้างตารางเก่า
+                        data.forEach(attendance => {
+                            const row = document.createElement("tr");
+                            row.innerHTML = `
+                                <td>${attendance.start_date}</td>
+                                <td>${attendance.end_date}</td>
+                                <td>${attendance.reason}</td>
+                                <td>${attendance.approve_user}</td>
+                                <td>${attendance.status}</td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error fetching leave attendances:", error);
+                        document.getElementById("leave-attendance-table").innerHTML = `
+                            <tr>
+                                <td colspan="3" class="text-center">Error loading data</td>
+                            </tr>
+                        `;
+                    });
+            }
+
+            // ดึงข้อมูลประเภทการลาจากเซิร์ฟเวอร์
+            fetch("/attendance/get-leave-types/")
+                .then(response => response.json())
+                .then(data => {
+                    const leaveTypeSelect = document.getElementById("leave-type");
+                    leaveTypeSelect.innerHTML = ""; // ล้างตัวเลือกเก่า
+                    data.forEach(type => {
+                        const option = document.createElement("option");
+                        option.value = type.id;
+                        option.textContent = type.th_name;
+                        leaveTypeSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error fetching leave types:", error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: 'ไม่สามารถโหลดประเภทการลาได้ !',
+                    });
+                });
 
             liff.init({ liffId })
                 .then(() => {
@@ -96,60 +196,10 @@
                             .then(profile => {
                                 const userId = profile.userId;
 
-                                // Fetch staff and leave balances
-                                fetch(`/attendance/leave-request/?userID=${userId}`)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.error) {
-                                            Swal.fire({
-                                                icon: 'error',
-                                                title: 'เกิดข้อผิดพลาด',
-                                                text: data.error,
-                                            });
-                                            return;
-                                        }
-
-                                        // Update staff information
-                                        const staff = data.staff;
-                                        document.getElementById("staff-name").textContent = `${staff.staff_fname} ${staff.staff_lname}`;
-                                        document.getElementById("staff-title").textContent = staff.staff_title;
-                                        document.getElementById("staff-department").textContent = staff.staff_department;
-                                        document.getElementById("staff-code").textContent = staff.staff_code;
-
-                                        // Update leave balances table
-                                        const leavebalancetableBody = document.getElementById("leave-balance-table");
-                                        leavebalancetableBody.innerHTML = "";
-                                        data.leave_balances.forEach(balance => {
-                                            const row = document.createElement("tr");
-                                            row.innerHTML = `
-                                                <td>${balance.leave_type}</td>
-                                                <td>${balance.total_days}</td>
-                                                <td>${balance.remaining_days}</td>
-                                            `;
-                                            leavebalancetableBody.appendChild(row);
-                                        });
-                                        // Update leave attendances table
-                                        const leaveattendancetableBody = document.getElementById("leave-attendance-table");
-                                        leaveattendancetableBody.innerHTML = "";
-                                        data.leave_attendances.forEach(attendance => {
-                                            const row = document.createElement("tr");
-                                            row.innerHTML = `
-                                                <td>${attendance.start_date}</td>
-                                                <td>${attendance.end_date}</td>
-                                                <td>${attendance.reason}</td>
-                                                <td>${attendance.status}</td>
-                                            `;
-                                            leaveattendancetableBody.appendChild(row);
-                                        });
-                                    })
-                                    .catch(error => {
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'เกิดข้อผิดพลาด',
-                                            text: 'ไม่สามารถดึงข้อมูลพนักงานและวันลาคงเหลือได้',
-                                        });
-                                        console.error("Error fetching data:", error);
-                                    });
+                                // โหลดข้อมูลพนักงานและวันลาคงเหลือ
+                                loadEmployeeData(userId);
+                                loadLeaveBalances(userId);
+                                loadLeaveBalances(userId);
 
                                 document.getElementById("submit-request").addEventListener("click", () => {
                                     const startDate = document.getElementById("start-date").value;
@@ -214,8 +264,6 @@
                                                 icon: 'success',
                                                 title: 'เสร็จสมบูรณ์',
                                                 text: 'บันทึกเสร็จสมบูรณ์ !',
-                                            }).then(function() {
-                                            window.location.href = "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-request/";
                                             });
                                         }
                                     })
