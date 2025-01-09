@@ -14,10 +14,10 @@
         <!-- Staff Information -->
         <div class="mb-3">
             <h4>ข้อมูลพนักงาน</h4>
-            <p><strong>ชื่อ:</strong> {{ staff.staff_fname }} {{ staff.staff_lname }}</p>
-            <p><strong>ตำแหน่ง:</strong> {{ staff.staff_title }}</p>
-            <p><strong>แผนก:</strong> {{ staff.staff_department }}</p>
-            <p><strong>รหัสพนักงาน:</strong> {{ staff.staff_code }}</p>
+            <p><strong>ชื่อ:</strong> <span id="staff-name">Loading...</span></p>
+            <p><strong>ตำแหน่ง:</strong> <span id="staff-title">Loading...</span></p>
+            <p><strong>แผนก:</strong> <span id="staff-department">Loading...</span></p>
+            <p><strong>รหัสพนักงาน:</strong> <span id="staff-code">Loading...</span></p>
         </div>
 
         <!-- Leave Balances -->
@@ -31,23 +31,16 @@
                         <th>วันลาคงเหลือ</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for balance in leave_balances %}
+                <tbody id="leave-balance-table">
                     <tr>
-                        <td>{{ balance.leave_type }}</td>
-                        <td>{{ balance.total_days }}</td>
-                        <td>{{ balance.remaining_days }}</td>
+                        <td colspan="3" class="text-center">Loading...</td>
                     </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center">ไม่มีข้อมูลวันลาคงเหลือ</td>
-                    </tr>
-                    {% endfor %}
                 </tbody>
             </table>
         </div>
-
-        <h4>คำขออนุมัติ</h4>
+        <!-- Leave Balances -->
+        <div class="mb-3">
+            <h4>คำขออนุมัติ</h4>
             <table class="table table-bordered">
                 <thead>
                     <tr>
@@ -57,19 +50,10 @@
                         <th>สถานะ</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for attendance in leave_attendances %}
+                <tbody id="leave-attendance-table">
                     <tr>
-                        <td>{{ attendance.start_date }}</td>
-                        <td>{{ attendance.end_date }}</td>
-                        <td>{{ attendance.reason }}</td>
-                        <td>{{ attendance.status }}</td>
+                        <td colspan="3" class="text-center">Loading...</td>
                     </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center">ไม่มีข้อมูลคำขออนุมัติ</td>
-                    </tr>
-                    {% endfor %}
                 </tbody>
             </table>
         </div>
@@ -111,10 +95,61 @@
                         liff.getProfile()
                             .then(profile => {
                                 const userId = profile.userId;
-                                // Redirect to include userID in URL
-                                if (!window.location.search.includes("userID")) {
-                                    window.location.href = `/attendance/leave-request/?userID=${userId}`;
-                                }
+
+                                // Fetch staff and leave balances
+                                fetch(`/attendance/leave-request/?userID=${userId}`)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.error) {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'เกิดข้อผิดพลาด',
+                                                text: data.error,
+                                            });
+                                            return;
+                                        }
+
+                                        // Update staff information
+                                        const staff = data.staff;
+                                        document.getElementById("staff-name").textContent = `${staff.staff_fname} ${staff.staff_lname}`;
+                                        document.getElementById("staff-title").textContent = staff.staff_title;
+                                        document.getElementById("staff-department").textContent = staff.staff_department;
+                                        document.getElementById("staff-code").textContent = staff.staff_code;
+
+                                        // Update leave balances table
+                                        const leavebalancetableBody = document.getElementById("leave-balance-table");
+                                        leavebalancetableBody.innerHTML = "";
+                                        data.leave_balances.forEach(balance => {
+                                            const row = document.createElement("tr");
+                                            row.innerHTML = `
+                                                <td>${balance.leave_type}</td>
+                                                <td>${balance.total_days}</td>
+                                                <td>${balance.remaining_days}</td>
+                                            `;
+                                            leavebalancetableBody.appendChild(row);
+                                        });
+                                        // Update leave attendances table
+                                        const leaveattendancetableBody = document.getElementById("leave-attendance-table");
+                                        leaveattendancetableBody.innerHTML = "";
+                                        data.leave_attendances.forEach(attendance => {
+                                            const row = document.createElement("tr");
+                                            row.innerHTML = `
+                                                <td>${attendance.start_date}</td>
+                                                <td>${attendance.end_date}</td>
+                                                <td>${attendance.reason}</td>
+                                                <td>${attendance.status}</td>
+                                            `;
+                                            leaveattendancetableBody.appendChild(row);
+                                        });
+                                    })
+                                    .catch(error => {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'เกิดข้อผิดพลาด',
+                                            text: 'ไม่สามารถดึงข้อมูลพนักงานและวันลาคงเหลือได้',
+                                        });
+                                        console.error("Error fetching data:", error);
+                                    });
 
                                 document.getElementById("submit-request").addEventListener("click", () => {
                                     const startDate = document.getElementById("start-date").value;
