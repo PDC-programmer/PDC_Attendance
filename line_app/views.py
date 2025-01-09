@@ -127,6 +127,11 @@ def handle_postback(event):
                 event.reply_token,
                 TextSendMessage(text="ไม่สามารถทำซ้ำได้ มีการพิจารณาคำขอการลานี้ไปแล้ว !")
             )
+        elif leave_record.status in ["cancelled"]:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="ไม่สามารถทำรายการได้ คำขออนุมัตินี้ยกเลิกไปแล้ว !")
+            )
             return
 
         # Process the approval or rejection

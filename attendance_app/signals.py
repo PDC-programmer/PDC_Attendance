@@ -20,3 +20,15 @@ def update_leave_balance(sender, instance, **kwargs):
             else:
                 # Handle กรณีวันที่คงเหลือไม่พอ
                 raise ValueError("Remaining leave days are insufficient.")
+
+        # กรณียกเลิก (เฉพาะที่เคยอนุมัติแล้วเท่านั้น)
+        elif instance.status == 'cancelled':
+            # ตรวจสอบสถานะก่อนหน้า
+            previous_status = LeaveAttendance.objects.get(id=instance.id).status
+            if previous_status == 'approved':
+                num_days = (instance.end_date - instance.start_date).days + 1
+                leave_balance = LeaveBalance.objects.filter(user=instance.user, leave_type=instance.leave_type).first()
+
+                if leave_balance:
+                    leave_balance.remaining_days += num_days
+                    leave_balance.save()
