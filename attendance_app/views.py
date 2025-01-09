@@ -62,26 +62,25 @@ def get_leave_attendances(request, user_id):
     if not user:
         return JsonResponse({"error": "User not found"}, status=404)
 
-    attendance = LeaveAttendance.objects.filter(user=user).first()
-    if not attendance:
+    leave_attendances = LeaveAttendance.objects.filter(user=user)
+    if not leave_attendances:
         return JsonResponse({"error": "ไม่พบข้อมูลคำขออนุมัติ"}, status=404)
 
     # ค้นหาข้อมูลผู้อนุมัติใน BsnStaff
-    approver_staff = BsnStaff.objects.filter(django_usr_id=attendance.approve_user).first()
+    # approver_staff = BsnStaff.objects.filter(django_usr_id=attendance.approve_user).first()
 
     # หากไม่พบข้อมูลใน BsnStaff ให้แสดงข้อมูลจาก approve_user แทน
-    if approver_staff:
-        approver_name = f"{approver_staff.staff_fname} {approver_staff.staff_lname}"
-    else:
-        approver_name = attendance.approve_user.username if attendance.approve_user else "N/A"
+    # if approver_staff:
+    #     approver_name = f"{approver_staff.staff_fname} {approver_staff.staff_lname}"
+    # else:
+    #     approver_name = attendance.approve_user.username if attendance.approve_user else "N/A"
 
-    return JsonResponse({
-        "start_date": attendance.start_date,
-        "end_date": attendance.end_date,
-        "reason": attendance.reason,
-        "approve_user": approver_name,
-        "status": attendance.status,
-    }, status=200)
+    data = [{"start_date": leave.start_date,
+             "end_date": leave.end_date,
+             "reason": leave.reason,
+             "status": leave.status,
+             } for leave in leave_attendances]
+    return JsonResponse(data, safe=False)
 
 
 @csrf_exempt
