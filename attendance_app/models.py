@@ -1,5 +1,10 @@
 from django.db import models
 from user_app.models import User
+import os
+
+
+def leave_request_image_path(instance, filename):
+    return os.path.join(f"leave_request_images/{instance.user.username}/{instance.start_date}", filename)
 
 
 class LeaveType(models.Model):
@@ -23,6 +28,7 @@ class LeaveAttendance(models.Model):
                                                       ('cancelled', 'ยกเลิก')],
                               default='pending')
     leave_type = models.ForeignKey(LeaveType, on_delete=models.DO_NOTHING, default='1')
+    image = models.ImageField(upload_to=leave_request_image_path, null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.username}: {self.status} ({self.start_date} to {self.end_date})"
