@@ -136,9 +136,9 @@ def leave_request_view(request):
                 line_bot_api.push_message(
                     approver_user.uid,
                     TemplateSendMessage(
-                        alt_text=f"{leave_record.id}: คำขอการลาของ \n{user_fullname}",
+                        alt_text=f"คำขอการลาของ {user_fullname}",
                         template=ButtonsTemplate(
-                            title=f"คำขอการลาของ {user_fullname}",
+                            title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
                             text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
                             actions=[
                                 PostbackAction(
