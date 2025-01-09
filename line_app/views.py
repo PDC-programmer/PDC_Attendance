@@ -37,7 +37,7 @@ def register(request):
         if not staff:
             return JsonResponse({"error": "Staff not found"}, status=404)
 
-        django_usr_id = User.objects.filter(id=staff.django_usr_id.id)
+        django_usr_id = User.objects.filter(id=staff.django_usr_id.id).exists()
         if django_usr_id:
             user = User.objects.get(id=django_usr_id)
             user.uid = user_id
