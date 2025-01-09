@@ -5,25 +5,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>คำขอการลา</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        h1, h4 {
+            color: #007bff;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        table {
+            background-color: #ffffff;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        th {
+            background-color: #007bff;
+            color: #ffffff;
+        }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- SweetAlert2 -->
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
     <div class="container mt-5">
         <h1 class="text-center">คำขอการลา</h1>
-        <!-- ข้อมูลพนักงาน -->
-        <div class="mb-3">
+
+        <!-- Employee Information -->
+        <div class="mb-4">
             <h4>ข้อมูลพนักงาน</h4>
-            <p><strong>ชื่อ:</strong> <span id="employee-name">Loading...</span></p>
-            <p><strong>ตำแหน่ง:</strong> <span id="employee-title">Loading...</span></p>
-            <p><strong>แผนก:</strong> <span id="employee-department">Loading...</span></p>
-            <p><strong>รหัสพนักงาน:</strong> <span id="employee-staff_code">Loading...</span></p>
+            <div class="row">
+                <div class="col-6"><strong>ชื่อ:</strong> <span id="employee-name">Loading...</span></div>
+                <div class="col-6"><strong>ตำแหน่ง:</strong> <span id="employee-title">Loading...</span></div>
+                <div class="col-6"><strong>แผนก:</strong> <span id="employee-department">Loading...</span></div>
+                <div class="col-6"><strong>รหัสพนักงาน:</strong> <span id="employee-staff_code">Loading...</span></div>
+            </div>
         </div>
 
-        <!-- ตารางจำนวนวันลาคงเหลือ -->
-        <div class="mb-3">
+        <!-- Leave Balance Table -->
+        <div class="mb-4">
             <h4>จำนวนวันลาคงเหลือ</h4>
-            <table class="table table-bordered">
+            <table class="table table-striped">
                 <thead>
                     <tr>
                         <th>ประเภทการลา</th>
@@ -39,16 +75,15 @@
             </table>
         </div>
 
-        <!-- ตารางคำขออนุมัติ -->
-        <div class="mb-3">
+        <!-- Leave Request History -->
+        <div class="mb-4">
             <h4>คำขออนุมัติของคุณ</h4>
-            <table class="table table-bordered">
+            <table class="table table-striped">
                 <thead>
                     <tr>
                         <th>วันที่เริ่มลา</th>
                         <th>ถึงวันที่</th>
                         <th>เหตุผล</th>
-<!--                        <th>ผู้อนุมัติ</th>-->
                         <th>สถานะ</th>
                     </tr>
                 </thead>
@@ -60,26 +95,29 @@
             </table>
         </div>
 
-        <!-- ฟอร์มคำขอการลา -->
-        <div class="mb-3">
-            <label for="start-date" class="form-label">เริ่มวันที่</label>
-            <input type="date" class="form-control" id="start-date">
+        <!-- Leave Request Form -->
+        <div class="mb-4">
+            <h4>คำขอการลา</h4>
+            <div class="mb-3">
+                <label for="start-date" class="form-label">เริ่มวันที่</label>
+                <input type="date" class="form-control" id="start-date">
+            </div>
+            <div class="mb-3">
+                <label for="end-date" class="form-label">ถึงวันที่</label>
+                <input type="date" class="form-control" id="end-date">
+            </div>
+            <div class="mb-3">
+                <label for="leave-type" class="form-label">ประเภทการลา</label>
+                <select class="form-select" id="leave-type">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="reason" class="form-label">เหตุผล</label>
+                <textarea class="form-control" id="reason" rows="3"></textarea>
+            </div>
+            <button id="submit-request" class="btn btn-primary w-100">ยืนยัน</button>
         </div>
-        <div class="mb-3">
-            <label for="end-date" class="form-label">ถึงวันที่</label>
-            <input type="date" class="form-control" id="end-date">
-        </div>
-        <div class="mb-3">
-            <label for="leave-type" class="form-label">ประเภทการลา</label>
-            <select class="form-select" id="leave-type">
-                <option value="">Loading...</option>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label for="reason" class="form-label">เหตุผล</label>
-            <textarea class="form-control" id="reason" rows="3"></textarea>
-        </div>
-        <button id="submit-request" class="btn btn-primary w-100 mb-3">ยืนยัน</button>
     </div>
 
     <script>
