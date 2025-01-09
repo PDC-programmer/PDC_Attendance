@@ -27,7 +27,7 @@ def get_leave_balances(request, user_id):
     # ค้นหา User ที่มี UID ตรงกับ userID
     user = User.objects.filter(uid=user_id).first()
     if not user:
-        return JsonResponse({"error": "User not found"}, status=404)
+        return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ"}, status=404)
 
     # ดึงข้อมูลประเภทการลา
     leave_balances = LeaveBalance.objects.filter(user=user)
@@ -42,7 +42,7 @@ def get_staff(request, user_id):
     # ค้นหา User ที่มี UID ตรงกับ userID
     user = User.objects.filter(uid=user_id).first()
     if not user:
-        return JsonResponse({"error": "User not found"}, status=404)
+        return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ"}, status=404)
 
     staff = BsnStaff.objects.filter(django_usr_id=user).first()
     if not staff:
@@ -60,7 +60,7 @@ def get_leave_attendances(request, user_id):
     # ค้นหา User ที่มี UID ตรงกับ userID
     user = User.objects.filter(uid=user_id).first()
     if not user:
-        return JsonResponse({"error": "User not found"}, status=404)
+        return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ"}, status=404)
 
     leave_attendances = LeaveAttendance.objects.filter(user=user)
     if not leave_attendances:

@@ -5,54 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>คำขอการลา</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: Arial, sans-serif;
-            color: #333;
-        }
-        h1, h4 {
-            color: #007bff;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        table {
-            background-color: #ffffff;
-        }
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
-        }
-        .btn-primary:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
-        }
-        th {
-            background-color: #007bff;
-            color: #ffffff;
-        }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- SweetAlert2 -->
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <div class="container mt-5">
         <h1 class="text-center">คำขอการลา</h1>
 
+        <!-- Input UID -->
+        <div class="mb-4">
+            <label for="user-uid" class="form-label">กรอก UID</label>
+            <input type="text" id="user-uid" class="form-control" placeholder="กรอก UID ของคุณ">
+            <button id="load-data" class="btn btn-primary mt-3 w-100">โหลดข้อมูล</button>
+        </div>
+
         <!-- Employee Information -->
         <div class="mb-4">
             <h4>ข้อมูลพนักงาน</h4>
             <div class="row">
-                <div class="col-6"><strong>ชื่อ:</strong> <span id="employee-name">Loading...</span></div>
-                <div class="col-6"><strong>ตำแหน่ง:</strong> <span id="employee-title">Loading...</span></div>
-                <div class="col-6"><strong>แผนก:</strong> <span id="employee-department">Loading...</span></div>
-                <div class="col-6"><strong>รหัสพนักงาน:</strong> <span id="employee-staff_code">Loading...</span></div>
+                <div class="col-6"><strong>ชื่อ:</strong> <span id="employee-name">-</span></div>
+                <div class="col-6"><strong>ตำแหน่ง:</strong> <span id="employee-title">-</span></div>
+                <div class="col-6"><strong>แผนก:</strong> <span id="employee-department">-</span></div>
+                <div class="col-6"><strong>รหัสพนักงาน:</strong> <span id="employee-staff_code">-</span></div>
             </div>
         </div>
 
@@ -69,7 +42,7 @@
                 </thead>
                 <tbody id="leave-balance-table">
                     <tr>
-                        <td colspan="3" class="text-center">Loading...</td>
+                        <td colspan="3" class="text-center">-</td>
                     </tr>
                 </tbody>
             </table>
@@ -89,7 +62,7 @@
                 </thead>
                 <tbody id="leave-attendance-table">
                     <tr>
-                        <td colspan="4" class="text-center">Loading...</td>
+                        <td colspan="4" class="text-center">-</td>
                     </tr>
                 </tbody>
             </table>
@@ -122,8 +95,6 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const liffId = "2006739665-RZxk3YVm"; // Replace with your LIFF ID
-
             // ฟังก์ชันโหลดข้อมูลพนักงาน
             function loadEmployeeData(uid) {
                 fetch(`/attendance/get-staff/${uid}/`)
@@ -249,103 +220,64 @@
                     });
                 });
 
-            liff.init({ liffId })
-                .then(() => {
-                    if (!liff.isLoggedIn()) {
-                        liff.login();
+            // เมื่อคลิกปุ่ม "โหลดข้อมูล"
+            document.getElementById("load-data").addEventListener("click", function () {
+                const uid = document.getElementById("user-uid").value.trim();
+                if (!uid) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'กรุณากรอก UID',
+                        text: 'UID จำเป็นต้องระบุ!',
+                    });
+                    return;
+                }
+
+                // โหลดข้อมูลพนักงานและวันลาคงเหลือ
+                loadEmployeeData(uid);
+                loadLeaveBalances(uid);
+                loadLeaveAttendances(uid);
+            });
+
+            // ฟังก์ชันส่งคำขอการลา
+            document.getElementById("submit-request").addEventListener("click", function () {
+                const uid = document.getElementById("user-uid").value.trim();
+                const startDate = document.getElementById("start-date").value;
+                const endDate = document.getElementById("end-date").value;
+                const leaveType = document.getElementById("leave-type").value;
+                const reason = document.getElementById("reason").value;
+
+                if (!uid || !startDate || !endDate || !leaveType || !reason) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ข้อมูลไม่ครบถ้วน...',
+                        text: 'กรุณากรอกข้อมูลให้ครบถ้วน !',
+                    });
+                    return;
+                }
+
+                fetch("/attendance/leave-request/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userID: uid, startDate, endDate, type: leaveType, reason }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'เกิดข้อผิดพลาด',
+                            text: data.error,
+                        });
                     } else {
-                        liff.getProfile()
-                            .then(profile => {
-                                const userId = profile.userId;
-
-                                // โหลดข้อมูลพนักงานและวันลาคงเหลือ
-                                loadEmployeeData(userId);
-                                loadLeaveBalances(userId);
-                                loadLeaveAttendances(userId);
-
-                                document.getElementById("submit-request").addEventListener("click", () => {
-                                    const startDate = document.getElementById("start-date").value;
-                                    const endDate = document.getElementById("end-date").value;
-                                    const leaveType = document.getElementById("leave-type").value;
-                                    const reason = document.getElementById("reason").value;
-
-                                    // ตรวจสอบข้อมูล
-                                    if (!startDate || !endDate || !leaveType || !reason) {
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'ข้อมูลไม่ครบถ้วน...',
-                                            text: 'กรุณากรอกข้อมูลให้ครบถ้วน !',
-                                        });
-                                        return;
-                                    }
-
-                                    // ตรวจสอบว่า endDate มากกว่า startDate หรือไม่
-                                    if (new Date(endDate) < new Date(startDate)) {
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'วันที่ไม่ถูกต้อง...',
-                                            text: 'วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น !',
-                                        });
-                                        return;
-                                    }
-
-                                    // Show loading alert
-                                    Swal.fire({
-                                        title: 'กำลังบันทึกข้อมูล...',
-                                        text: 'กรุณารอสักครู่...',
-                                        allowOutsideClick: false,
-                                        didOpen: () => {
-                                            Swal.showLoading();
-                                        }
-                                    });
-
-                                    fetch("/attendance/leave-request/", {
-                                        method: "POST",
-                                        headers: {
-                                            "Content-Type": "application/json",
-                                        },
-                                        body: JSON.stringify({
-                                            userID: userId,
-                                            startDate,
-                                            endDate,
-                                            type: leaveType,
-                                            reason,
-                                        }),
-                                    })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        Swal.close(); // Close loading alert
-                                        if (data.error) {
-                                            Swal.fire({
-                                                icon: 'error',
-                                                title: 'เกิดข้อผิดพลาด',
-                                                text: data.error,
-                                            });
-                                        } else {
-                                            Swal.fire({
-                                                icon: 'success',
-                                                title: 'เสร็จสมบูรณ์',
-                                                text: 'บันทึกเสร็จสมบูรณ์ !',
-                                            }).then(function() {
-                                                window.location.reload();
-                                            });
-                                        }
-                                    })
-                                    .catch(error => {
-                                        Swal.close(); // Close loading alert
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'เกิดข้อผิดพลาด',
-                                            text: 'ไม่สามารถบันทึกคำขอการลาได้ !',
-                                        });
-                                        console.error("Error:", error);
-                                    });
-                                });
-                            })
-                            .catch(err => console.error("Error getting profile: ", err));
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'เสร็จสมบูรณ์',
+                            text: 'บันทึกเสร็จสมบูรณ์ !',
+                        }).then(() => window.location.reload());
                     }
                 })
-                .catch(err => console.error("Error initializing LIFF: ", err));
+                .catch(error => console.error("Error submitting leave request:", error));
+            });
         });
     </script>
 </body>
