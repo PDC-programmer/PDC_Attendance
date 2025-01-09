@@ -116,58 +116,65 @@ def leave_request_view(request):
         leave_balance = LeaveBalance.objects.filter(user=user, leave_type=leave_type_id).first()
         if not leave_balance:
             return JsonResponse({"error": "Leave balance not found"}, status=404)
+        elif leave_balance:
+            num_days = (end_date - start_date).days + 1
+            if leave_balance.remaining_days >= num_days:
+                # หักจำนวนวันจาก remaining_days
+                # สร้าง LeaveAttendance
+                leave_record = LeaveAttendance.objects.create(
+                    user=user,
+                    approve_user=approver_user,
+                    start_date=start_date,
+                    end_date=end_date,
+                    reason=reason,
+                    leave_type=leave_type,
+                )
 
-        # สร้าง LeaveAttendance
-        leave_record = LeaveAttendance.objects.create(
-            user=user,
-            approve_user=approver_user,
-            start_date=start_date,
-            end_date=end_date,
-            reason=reason,
-            leave_type=leave_type,
-        )
+                # ส่ง Template Message ถึง Approver
+                if approver_user.uid:
+                    user_fullname = f"{staff.staff_fname} {staff.staff_lname}" if staff.staff_fname and staff.staff_lname else user.username
+                    approver_fullname = f"{approver.staff_fname} {approver.staff_lname}" if approver.staff_fname and approver.staff_lname else approver_user.username
 
-        # ส่ง Template Message ถึง Approver
-        if approver_user.uid:
-            user_fullname = f"{staff.staff_fname} {staff.staff_lname}" if staff.staff_fname and staff.staff_lname else user.username
-            approver_fullname = f"{approver.staff_fname} {approver.staff_lname}" if approver.staff_fname and approver.staff_lname else approver_user.username
-
-            try:
-                line_bot_api.push_message(
-                    approver_user.uid,
-                    TemplateSendMessage(
-                        alt_text=f"{leave_record.id}: คำขอการลาของ \n{user_fullname}",
-                        template=ButtonsTemplate(
-                            title=f"คำขอการลาของ {user_fullname}",
-                            text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
-                            actions=[
-                                PostbackAction(
-                                    label="อนุมัติ",
-                                    display_text=f"อนุมัติคำขอการลารหัส: {leave_record.id}",
-                                    data=f"action=approve&leave_id={leave_record.id}"
-                                ),
-                                PostbackAction(
-                                    label="ปฏิเสธ",
-                                    display_text=f"ปฏิเสธคำขอการลารหัส: {leave_record.id}",
-                                    data=f"action=reject&leave_id={leave_record.id}"
-                                ),
-                            ]
+                    try:
+                        line_bot_api.push_message(
+                            approver_user.uid,
+                            TemplateSendMessage(
+                                alt_text=f"{leave_record.id}: คำขอการลาของ \n{user_fullname}",
+                                template=ButtonsTemplate(
+                                    title=f"คำขอการลาของ {user_fullname}",
+                                    text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
+                                    actions=[
+                                        PostbackAction(
+                                            label="อนุมัติ",
+                                            display_text=f"อนุมัติคำขอการลารหัส: {leave_record.id}",
+                                            data=f"action=approve&leave_id={leave_record.id}"
+                                        ),
+                                        PostbackAction(
+                                            label="ปฏิเสธ",
+                                            display_text=f"ปฏิเสธคำขอการลารหัส: {leave_record.id}",
+                                            data=f"action=reject&leave_id={leave_record.id}"
+                                        ),
+                                    ]
+                                )
+                            )
                         )
-                    )
-                )
-            except Exception as e:
-                return JsonResponse({"error": f"Failed to send message: {str(e)}"}, status=500)
+                    except Exception as e:
+                        return JsonResponse({"error": f"Failed to send message: {str(e)}"}, status=500)
 
-            if not user:
-                return JsonResponse({"error": "User not found"}, status=404)
+                    if not user:
+                        return JsonResponse({"error": "User not found"}, status=404)
+                    else:
+                        line_bot_api.push_message(
+                            user_id,
+                            TextSendMessage(
+                                text=f"คำขอการลา: {leave_record.id}\nกำลังรอการพิจารณา\nผู้อนุมัติ: {approver_fullname}"
+                            )
+                        )
+
+                return JsonResponse({"message": "Leave request submitted and notification sent successfully"},
+                                    status=201)
             else:
-                line_bot_api.push_message(
-                    user_id,
-                    TextSendMessage(
-                        text=f"คำขอการลา: {leave_record.id}\nกำลังรอการพิจารณา\nผู้อนุมัติ: {approver_fullname}"
-                    )
-                )
-
-        return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
+                # Handle กรณีวันที่คงเหลือไม่พอ
+                raise ValueError("Remaining leave days are insufficient.")
 
     return render(request, "attendance/leave_request.html")
