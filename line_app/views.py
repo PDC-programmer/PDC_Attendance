@@ -37,14 +37,14 @@ def register(request):
         if not staff:
             return JsonResponse({"error": "Staff not found"}, status=404)
 
-        django_usr_id = User.objects.filter(id=staff.django_usr_id.id).exists()
-        if django_usr_id:
+        django_usr_id = User.objects.filter(id=staff.django_usr_id.id).first()
+        if not django_usr_id:
+            return JsonResponse({"error": "User not found"}, status=404)
+        else:
             user = User.objects.get(id=django_usr_id)
             user.uid = user_id
             user.save()
             return JsonResponse({"success": True, "message": "Registration successful."}, status=200)
-        else:
-            return JsonResponse({"error": "User not found"}, status=404)
 
     return render(request, 'line_app/register.html')
 
