@@ -17,9 +17,10 @@ class LeaveAttendance(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     reason = models.TextField()
-    status = models.CharField(max_length=50, choices=[('approved', 'Approved'),
-                                                      ('pending', 'Pending'),
-                                                      ('rejected', 'Rejected')],
+    status = models.CharField(max_length=50, choices=[('approved', 'อนุมัติ'),
+                                                      ('pending', 'รออนุมัติ'),
+                                                      ('rejected', 'ปฏิเสธ'),
+                                                      ('cancelled', 'ยกเลิก')],
                               default='pending')
     leave_type = models.ForeignKey(LeaveType, on_delete=models.DO_NOTHING, default='1')
 
@@ -35,3 +36,18 @@ class LeaveBalance(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.leave_type.th_name}: {self.remaining_days} days remaining"
+
+    def calculate_leave_balance(self):
+        attendance = LeaveAttendance.objects.filter(
+            user=self.user,
+            status='approved',
+            leave_type=self.leave_type,
+        )
+
+        leave_days = (attendance.end_date - attendance.start_date).days + 1
+
+    def save(self, *args, **kwargs):
+        self.remaining_days = self.calculate_leave_balance()
+        super().save(*args, **kwargs)
+
+        LeaveBalance.objects.filter(user=self.user).update(remaining_days=self.remaining_days)
