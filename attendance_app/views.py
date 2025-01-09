@@ -65,11 +65,21 @@ def get_leave_attendances(request, user_id):
     attendance = LeaveAttendance.objects.filter(user=user).first()
     if not attendance:
         return JsonResponse({"error": "ไม่พบข้อมูลคำขออนุมัติ"}, status=404)
+
+    # ค้นหาข้อมูลผู้อนุมัติใน BsnStaff
+    approver_staff = BsnStaff.objects.filter(django_usr_id=attendance.approve_user).first()
+
+    # หากไม่พบข้อมูลใน BsnStaff ให้แสดงข้อมูลจาก approve_user แทน
+    if approver_staff:
+        approver_name = f"{approver_staff.staff_fname} {approver_staff.staff_lname}"
+    else:
+        approver_name = attendance.approve_user.username if attendance.approve_user else "N/A"
+
     return JsonResponse({
         "start_date": attendance.start_date,
         "end_date": attendance.end_date,
         "reason": attendance.reason,
-        "approve_user": attendance.approve_user,
+        "approve_user": approver_name,
         "status": attendance.status,
     }, status=200)
 
@@ -127,7 +137,7 @@ def leave_request_view(request):
                 line_bot_api.push_message(
                     approver_user.uid,
                     TemplateSendMessage(
-                        alt_text=f"คำขอการลาของ {user_fullname}",
+                        alt_text=f"{leave_record.id}: คำขอการลาของ \n{user_fullname}",
                         template=ButtonsTemplate(
                             title=f"คำขอการลาของ {user_fullname}",
                             text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
