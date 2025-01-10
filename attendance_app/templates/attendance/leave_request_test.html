@@ -202,6 +202,16 @@
                 if (startDate) url += `start_date=${startDate}&`;
                 if (leaveType) url += `leave_type=${leaveType}`;
 
+                // Show loading alert
+                Swal.fire({
+                    title: 'กำลังค้นหาข้อมูล...',
+                    text: 'กรุณารอสักครู่...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
                 fetch(url)
                     .then(response => response.json())
                     .then(data => {
@@ -281,8 +291,6 @@
             // เมื่อคลิกปุ่มล้าง
             document.getElementById("reset-filter").addEventListener("click", function () {
                 resetFilters();
-                const uid = document.getElementById("user-uid").value.trim();
-                if (uid) searchLeaveAttendances(uid);
             });
 
             // โหลดตัวเลือกประเภทการลาในส่วนกรอง
