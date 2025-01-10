@@ -75,28 +75,6 @@
             </table>
         </div>
 
-        <!-- Filter and Search -->
-        <div class="mb-4">
-            <h4>ค้นหาและกรองคำขออนุมัติ</h4>
-            <div class="row g-2">
-                <div class="col-md-6">
-                    <label for="filter-start-date" class="form-label">ลาวันที่</label>
-                    <input type="date" id="filter-start-date" class="form-control">
-                </div>
-                <div class="col-md-6">
-                    <label for="filter-leave-type" class="form-label">ประเภทการลา</label>
-                    <select id="filter-leave-type" class="form-select">
-                        <option value="">ทั้งหมด</option>
-                        <!-- ตัวเลือกจะถูกเพิ่มโดย JavaScript -->
-                    </select>
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <button id="search-filter" class="btn btn-primary w-100 me-2">ค้นหา</button>
-                    <button id="reset-filter" class="btn btn-secondary w-100">ล้าง</button>
-                </div>
-            </div>
-        </div>
-
         <!-- Leave Request History -->
         <div class="mb-4">
             <h4>คำขออนุมัติ</h4>
@@ -208,34 +186,13 @@
                     });
             }
 
-            // ฟังก์ชันโหลดตัวเลือกประเภทการลาในส่วนค้นหา
-            function loadFilterLeaveTypes() {
-                fetch("/attendance/get-leave-types/")
-                    .then(response => response.json())
-                    .then(data => {
-                        const filterLeaveTypeSelect = document.getElementById("filter-leave-type");
-                        filterLeaveTypeSelect.innerHTML = '<option value="">ทั้งหมด</option>';
-                        data.forEach(type => {
-                            const option = document.createElement("option");
-                            option.value = type.id;
-                            option.textContent = type.th_name;
-                            filterLeaveTypeSelect.appendChild(option);
-                        });
-                    })
-                    .catch(error => console.error("Error fetching leave types:", error));
-            }
-
-            // ฟังก์ชันค้นหาข้อมูล Leave Attendance
-            function searchLeaveAttendances(uid, startDate, leaveType) {
-                let url = `/attendance/get-leave-attendances/${uid}/?`;
-                if (startDate) url += `start_date=${startDate}&`;
-                if (leaveType) url += `leave_type=${leaveType}`;
-
-                fetch(url)
+            // ฟังก์ชันโหลดประวัติคำขอการลา
+            function loadLeaveAttendances(uid) {
+                fetch(`/attendance/get-leave-attendances/${uid}/`)
                     .then(response => response.json())
                     .then(data => {
                         const cardsContainer = document.getElementById("leave-attendance-cards");
-                        cardsContainer.innerHTML = "";
+                        cardsContainer.innerHTML = ""; // ล้างข้อมูลเก่า
                         if (data.length > 0) {
                             data.forEach(attendance => {
                                 const card = document.createElement("div");
@@ -275,33 +232,21 @@
                         } else {
                             cardsContainer.innerHTML = `
                                 <div class="col-12 text-center">
-                                    <p class="text-muted">ไม่มีข้อมูลคำขอการลาตามเงื่อนไข</p>
+                                    <p class="text-muted">ไม่มีประวัติคำขอการลา</p>
                                 </div>
                             `;
                         }
                     })
-                    .catch(error => console.error("Error fetching leave attendances:", error));
+                    .catch(error => {
+                        console.error("Error fetching leave attendances:", error);
+                        const cardsContainer = document.getElementById("leave-attendance-cards");
+                        cardsContainer.innerHTML = `
+                            <div class="col-12 text-center">
+                                <p class="text-danger">เกิดข้อผิดพลาดในการดึงข้อมูล</p>
+                            </div>
+                        `;
+                    });
             }
-
-            // ฟังก์ชันล้างข้อมูลค้นหา
-            function resetFilters() {
-                document.getElementById("filter-start-date").value = "";
-                document.getElementById("filter-leave-type").value = "";
-            }
-
-            // เมื่อคลิกปุ่มค้นหา
-            document.getElementById("search-filter").addEventListener("click", function () {
-                const startDate = document.getElementById("filter-start-date").value;
-                const leaveType = document.getElementById("filter-leave-type").value;
-
-                searchLeaveAttendances(uid, startDate, leaveType);
-            });
-
-            // เมื่อคลิกปุ่มล้าง
-            document.getElementById("reset-filter").addEventListener("click", function () {
-                resetFilters();
-            });
-
 
             // โหลดประเภทการลา
             fetch("/attendance/get-leave-types/")
@@ -337,9 +282,7 @@
                                 // โหลดข้อมูลพนักงานและวันลาคงเหลือ
                                 loadEmployeeData(userId);
                                 loadLeaveBalances(userId);
-                                // โหลดตัวเลือกประเภทการลาในส่วนกรอง
-                                loadFilterLeaveTypes(userId);
-<!--                                loadLeaveAttendances(userId);-->
+                                loadLeaveAttendances(userId);
 
                                 document.getElementById("submit-request").addEventListener("click", () => {
                                     const startDate = document.getElementById("start-date").value;
