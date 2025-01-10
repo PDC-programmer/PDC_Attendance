@@ -23,7 +23,7 @@ def update_leave_balance(sender, instance, **kwargs):
     """
     ปรับปรุง LeaveBalance ตามสถานะใหม่
     """
-    num_days = (datetime.strptime(instance.end_date, "%Y-%m-%d") - datetime.strptime(instance.start_date, "%Y-%m-%d")).days + 1
+    num_days = (datetime.strptime(str(instance.end_date), "%Y-%m-%d") - datetime.strptime(str(instance.start_date), "%Y-%m-%d")).days + 1
 
     # ค้นหา LeaveBalance ที่เกี่ยวข้อง
     leave_balance = LeaveBalance.objects.filter(user=instance.user, leave_type=instance.leave_type).first()

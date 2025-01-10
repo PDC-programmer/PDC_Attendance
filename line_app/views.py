@@ -122,16 +122,17 @@ def handle_postback(event):
             return
 
         # Check if already approved or rejected
-        if leave_record.status in ["approved", "rejected"]:
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="ไม่สามารถทำซ้ำได้ มีการพิจารณาคำขอการลานี้ไปแล้ว !")
-            )
-        elif leave_record.status in ["cancelled"]:
+        if leave_record.status in ["cancelled"]:
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text="ไม่สามารถทำรายการได้ คำขออนุมัตินี้ยกเลิกไปแล้ว !")
             )
+        elif leave_record.status in ["approved", "rejected"] and action in ["approve", "reject"]:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="ไม่สามารถทำซ้ำได้ มีการพิจารณาคำขอการลานี้ไปแล้ว !")
+            )
+
             return
 
         # Process the approval or rejection
