@@ -164,7 +164,7 @@ def handle_postback(event):
 
         # Optionally notify the requester
         requester_line_id = leave_record.user.uid
-        if requester_line_id:
+        if requester_line_id and action in ["approve", "reject"]:
             line_bot_api.push_message(
                 requester_line_id,
                 TextSendMessage(text=f"คำขอการลาของคุณได้รับการ {leave_record.get_status_display()} !")
