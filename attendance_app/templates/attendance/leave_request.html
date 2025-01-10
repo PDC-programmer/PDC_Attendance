@@ -280,6 +280,7 @@
                                 </div>
                             `;
                         }
+                        Swal.close(); // Close loading alert
                     })
                     .catch(error => console.error("Error fetching leave attendances:", error));
             }
@@ -417,7 +418,7 @@
                                     });
 
                                     searchLeaveAttendances(uid, startDate, leaveType);
-                                    Swal.close(); // Close loading alert
+
                                 });
 
                                 // เมื่อคลิกปุ่มล้าง
