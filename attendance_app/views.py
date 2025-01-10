@@ -90,7 +90,10 @@ def get_leave_attendances(request, user_id):
 @csrf_exempt
 def leave_request_view(request):
     if request.method == "POST":
-        data = json.loads(request.body)
+        # ตรวจสอบการส่งข้อมูลแบบ FormData
+        data = request.POST
+        image = request.FILES.get("image")
+
         user_id = data.get("userID")
         start_date = data.get("startDate")
         end_date = data.get("endDate")
@@ -134,6 +137,7 @@ def leave_request_view(request):
             end_date=end_date,
             reason=reason,
             leave_type=leave_type,
+            image=image,
         )
 
         # ส่ง Template Message ถึง Approver

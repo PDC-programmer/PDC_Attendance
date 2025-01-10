@@ -80,6 +80,10 @@
                 <label for="reason" class="form-label">เหตุผล</label>
                 <textarea class="form-control" id="reason" rows="3"></textarea>
             </div>
+            <div class="mb-3">
+                <label for="leave-image" class="form-label">แนบไฟล์รูปภาพ</label>
+                <input type="file" class="form-control" id="leave-image" accept="image/*">
+            </div>
             <button id="submit-request" class="btn btn-primary w-100">ยืนยัน</button>
         </div>
     </div>
@@ -260,6 +264,7 @@
                 const endDate = document.getElementById("end-date").value;
                 const leaveType = document.getElementById("leave-type").value;
                 const reason = document.getElementById("reason").value;
+                const imageFile = document.getElementById("leave-image").files[0];
 
                 if (!uid || !startDate || !endDate || !leaveType || !reason) {
                     Swal.fire({
@@ -270,11 +275,25 @@
                     return;
                 }
 
+                const formData = new FormData();
+                formData.append("userID", uid);
+                formData.append("startDate", startDate);
+                formData.append("endDate", endDate);
+                formData.append("type", leaveType);
+                formData.append("reason", reason);
+                if (imageFile) {
+                    formData.append("image", imageFile);
+                }
+
                 fetch("/attendance/leave-request/", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userID: uid, startDate, endDate, type: leaveType, reason }),
+                    body: formData,
                 })
+<!--                fetch("/attendance/leave-request/", {-->
+<!--                    method: "POST",-->
+<!--                    headers: { "Content-Type": "application/json" },-->
+<!--                    body: JSON.stringify({ userID: uid, startDate, endDate, type: leaveType, reason }),-->
+<!--                })-->
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
