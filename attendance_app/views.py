@@ -194,7 +194,7 @@ def leave_request_view(request):
             else:
                 try:
                     line_bot_api.push_message(
-                        user_id.uid,
+                        user_id,
                         TemplateSendMessage(
                             alt_text=f"คำขอการลาของ {user_fullname}",
                             template=ButtonsTemplate(
