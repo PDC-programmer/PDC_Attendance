@@ -103,7 +103,7 @@
             <div id="leave-attendance-cards" class="row g-3">
                 <!-- Cards will be dynamically inserted here -->
                 <div class="col-12 text-center" id="loading-attendance">
-                    loading...
+                    -
                 </div>
             </div>
         </div>
@@ -139,8 +139,8 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-<!--            const liffId = "2006739665-RZxk3YVm"; // Replace with your LIFF ID-->
-            const liffId = "2006739665-ljvgErOK"; // Replace with your LIFF ID
+            const liffId = "2006739665-RZxk3YVm"; // Replace with your LIFF ID
+<!--            const liffId = "2006739665-ljvgErOK"; // Replace with your LIFF ID-->
 
             // ฟังก์ชันโหลดข้อมูลพนักงาน
             function loadEmployeeData(uid) {
@@ -231,16 +231,6 @@
                 let url = `/attendance/get-leave-attendances/${uid}/?`;
                 if (startDate) url += `start_date=${startDate}&`;
                 if (leaveType) url += `leave_type=${leaveType}`;
-
-                // Show loading alert
-                Swal.fire({
-                    title: 'กำลังค้นหาข้อมูล...',
-                    text: 'กรุณารอสักครู่...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
 
                 fetch(url)
                     .then(response => response.json())
@@ -390,7 +380,7 @@
             liff.init({ liffId })
                 .then(() => {
                     if (!liff.isLoggedIn()) {
-                        liff.login({ redirectUri: "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-request/" });
+                        liff.login();
                     } else {
                         liff.getProfile()
                             .then(profile => {
@@ -415,6 +405,16 @@
                                         });
                                         return;
                                     }
+
+                                    // Show loading alert
+                                    Swal.fire({
+                                        title: 'กำลังค้นหาข้อมูล...',
+                                        text: 'กรุณารอสักครู่...',
+                                        allowOutsideClick: false,
+                                        didOpen: () => {
+                                            Swal.showLoading();
+                                        }
+                                    });
 
                                     searchLeaveAttendances(uid, startDate, leaveType);
                                 });
