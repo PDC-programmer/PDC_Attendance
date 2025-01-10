@@ -104,7 +104,6 @@ def get_leave_attendances(request, user_id):
     return JsonResponse(data, safe=False)
 
 
-
 @csrf_exempt
 def leave_request_view(request):
     if request.method == "POST":

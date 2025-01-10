@@ -35,6 +35,16 @@
                                         return;
                                     }
 
+                                    // Show loading alert
+                                    Swal.fire({
+                                        title: 'กำลังค้นหาข้อมูล...',
+                                        text: 'กรุณารอสักครู่...',
+                                        allowOutsideClick: false,
+                                        didOpen: () => {
+                                            Swal.showLoading();
+                                        }
+                                    });
+
                                     // ดึงข้อมูลจากเซิร์ฟเวอร์
                                     fetch(`/line/get-staff-info/${staffCode}/`, {
                                         method: "GET",

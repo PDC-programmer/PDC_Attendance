@@ -139,7 +139,8 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const liffId = "2006739665-RZxk3YVm"; // Replace with your LIFF ID
+<!--            const liffId = "2006739665-RZxk3YVm"; // Replace with your LIFF ID-->
+            const liffId = "2006739665-ljvgErOK"; // Replace with your LIFF ID
 
             // ฟังก์ชันโหลดข้อมูลพนักงาน
             function loadEmployeeData(uid) {
@@ -230,6 +231,16 @@
                 let url = `/attendance/get-leave-attendances/${uid}/?`;
                 if (startDate) url += `start_date=${startDate}&`;
                 if (leaveType) url += `leave_type=${leaveType}`;
+
+                // Show loading alert
+                Swal.fire({
+                    title: 'กำลังค้นหาข้อมูล...',
+                    text: 'กรุณารอสักครู่...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
                 fetch(url)
                     .then(response => response.json())
@@ -379,7 +390,7 @@
             liff.init({ liffId })
                 .then(() => {
                     if (!liff.isLoggedIn()) {
-                        liff.login();
+                        liff.login({ redirectUri: "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-request/" });
                     } else {
                         liff.getProfile()
                             .then(profile => {
@@ -399,8 +410,8 @@
                                     if (!uid) {
                                         Swal.fire({
                                             icon: 'error',
-                                            title: 'กรุณากรอก UID',
-                                            text: 'UID จำเป็นต้องระบุ!',
+                                            title: 'ไม่พบข้อมูล UID',
+                                            text: 'กรุณาตรวจบัญชี Line ของคุณ !',
                                         });
                                         return;
                                     }
@@ -411,8 +422,6 @@
                                 // เมื่อคลิกปุ่มล้าง
                                 document.getElementById("reset-filter").addEventListener("click", function () {
                                     resetFilters();
-                                    const uid = userId;
-                                    if (uid) searchLeaveAttendances(uid);
                                 });
 
                                 document.getElementById("submit-request").addEventListener("click", () => {
