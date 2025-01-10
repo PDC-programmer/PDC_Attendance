@@ -61,30 +61,48 @@ def get_leave_attendances(request, user_id):
     # ค้นหา User ที่มี UID ตรงกับ userID
     user = User.objects.filter(uid=user_id).first()
     if not user:
-        return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ"}, status=404)
+        return JsonResponse({"error": "ไม่พบข้อมูลผู้ใช้งานในระบบ"}, status=404)
 
     leave_attendances = LeaveAttendance.objects.filter(user=user)
-    if not leave_attendances:
+
+    # รับค่า start_date, end_date และ leave_type จาก query parameters
+    start_date = request.GET.get("start_date")
+    leave_type_id = request.GET.get("leave_type")
+
+    # กรองข้อมูลตาม start_date, และ leave_type
+    if start_date:
+        leave_attendances = leave_attendances.filter(start_date=start_date)
+    if leave_type_id:
+        leave_attendances = leave_attendances.filter(leave_type_id=leave_type_id)
+
+    if not leave_attendances.exists():
         return JsonResponse({"error": "ไม่พบข้อมูลคำขออนุมัติ"}, status=404)
 
-    # ค้นหาข้อมูลผู้อนุมัติใน BsnStaff
-    # approver_staff = BsnStaff.objects.filter(django_usr_id=attendance.approve_user).first()
+    data = []
+    for leave in leave_attendances:
+        # ค้นหาข้อมูลผู้อนุมัติใน BsnStaff
+        approver_staff = BsnStaff.objects.filter(
+            django_usr_id=leave.approve_user.id).first() if leave.approve_user else None
 
-    # หากไม่พบข้อมูลใน BsnStaff ให้แสดงข้อมูลจาก approve_user แทน
-    # if approver_staff:
-    #     approver_name = f"{approver_staff.staff_fname} {approver_staff.staff_lname}"
-    # else:
-    #     approver_name = attendance.approve_user.username if attendance.approve_user else "N/A"
+        # หากไม่พบข้อมูลใน BsnStaff ให้แสดงข้อมูลจาก approve_user แทน
+        if approver_staff:
+            approver_name = f"{approver_staff.staff_fname} {approver_staff.staff_lname}"
+        else:
+            approver_name = leave.approve_user.username if leave.approve_user else "N/A"
 
-    data = [{"id": leave.id,
-             "start_date": leave.start_date,
-             "end_date": leave.end_date,
-             "leave_type": leave.leave_type.th_name,
-             "reason": leave.reason,
-             "status": leave.status,
-             # "image": leave.image,
-             } for leave in leave_attendances]
+        # Add leave details to the response data
+        data.append({
+            "id": leave.id,
+            "approve_user": approver_name,
+            "start_date": leave.start_date,
+            "end_date": leave.end_date,
+            "leave_type": leave.leave_type.th_name,
+            "reason": leave.reason,
+            "status": leave.get_status_display(),
+        })
+
     return JsonResponse(data, safe=False)
+
 
 
 @csrf_exempt
@@ -174,12 +192,32 @@ def leave_request_view(request):
             if not user:
                 return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ"}, status=404)
             else:
-                line_bot_api.push_message(
-                    user_id,
-                    TextSendMessage(
-                        text=f"คำขอการลา: {leave_record.id}\nกำลังรอการพิจารณา\nผู้อนุมัติ: {approver_fullname}"
+                try:
+                    line_bot_api.push_message(
+                        user_id.uid,
+                        TemplateSendMessage(
+                            alt_text=f"คำขอการลาของ {user_fullname}",
+                            template=ButtonsTemplate(
+                                title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
+                                text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
+                                actions=[
+                                    PostbackAction(
+                                        label="ยกเลิก",
+                                        display_text=f"ยกเลิกคำขอการลารหัส: {leave_record.id}",
+                                        data=f"action=cancel&leave_id={leave_record.id}"
+                                    )
+                                ]
+                            )
+                        )
                     )
-                )
+                except Exception as e:
+                    return JsonResponse({"error": f"Failed to send message: {str(e)}"}, status=500)
+                # line_bot_api.push_message(
+                #     user_id,
+                #     TextSendMessage(
+                #         text=f"คำขอการลา: {leave_record.id}\nกำลังรอการพิจารณา\nผู้อนุมัติ: {approver_fullname}"
+                #     )
+                # )
 
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
 

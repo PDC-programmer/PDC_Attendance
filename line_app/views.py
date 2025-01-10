@@ -101,7 +101,7 @@ def handle_follow(event):
 def handle_postback(event):
     try:
         data = event.postback.data  # Get postback data
-        line_id = event.source.user_id  # Get the Line ID of the approver
+        line_id = event.source.user_id  # Get the Line ID of the approver or requester
 
         # Parse the postback data
         postback_data = dict(item.split('=') for item in data.split('&'))
@@ -141,6 +141,9 @@ def handle_postback(event):
         elif action == "reject":
             leave_record.status = "rejected"
             response_message = "ปฏิเสธคำขอการลาเสร็จสิ้น !"
+        elif action == "cancel":
+            leave_record.status = "cancelled"
+            response_message = "ยกเลิกคำขอการลาเสร็จสิ้น !"
         else:
             line_bot_api.reply_message(
                 event.reply_token,
@@ -163,7 +166,7 @@ def handle_postback(event):
         if requester_line_id:
             line_bot_api.push_message(
                 requester_line_id,
-                TextSendMessage(text=f"คำขอการลาของคุณได้รับการ {status_display} !")
+                TextSendMessage(text=f"คำขอการลาของคุณได้รับการ {leave_record.get_status_display()} !")
             )
     except Exception as e:
         print(f"Error in handle_postback: {e}")

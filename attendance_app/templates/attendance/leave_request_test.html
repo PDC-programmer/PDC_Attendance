@@ -48,6 +48,28 @@
             </table>
         </div>
 
+        <!-- Filter and Search -->
+        <div class="mb-4">
+            <h4>ค้นหาและกรองคำขออนุมัติ</h4>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label for="filter-start-date" class="form-label">ลาวันที่</label>
+                    <input type="date" id="filter-start-date" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label for="filter-leave-type" class="form-label">ประเภทการลา</label>
+                    <select id="filter-leave-type" class="form-select">
+                        <option value="">ทั้งหมด</option>
+                        <!-- ตัวเลือกจะถูกเพิ่มโดย JavaScript -->
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <button id="search-filter" class="btn btn-primary w-100 me-2">ค้นหา</button>
+                    <button id="reset-filter" class="btn btn-secondary w-100">ล้าง</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Leave Request History -->
         <div class="mb-4">
             <h4>คำขออนุมัติ</h4>
@@ -157,13 +179,34 @@
                     });
             }
 
-            // ฟังก์ชันโหลดประวัติคำขอการลา
-            function loadLeaveAttendances(uid) {
-                fetch(`/attendance/get-leave-attendances/${uid}/`)
+            // ฟังก์ชันโหลดตัวเลือกประเภทการลาในส่วนค้นหา
+            function loadFilterLeaveTypes() {
+                fetch("/attendance/get-leave-types/")
+                    .then(response => response.json())
+                    .then(data => {
+                        const filterLeaveTypeSelect = document.getElementById("filter-leave-type");
+                        filterLeaveTypeSelect.innerHTML = '<option value="">ทั้งหมด</option>';
+                        data.forEach(type => {
+                            const option = document.createElement("option");
+                            option.value = type.id;
+                            option.textContent = type.th_name;
+                            filterLeaveTypeSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error("Error fetching leave types:", error));
+            }
+
+            // ฟังก์ชันค้นหาข้อมูล Leave Attendance
+            function searchLeaveAttendances(uid, startDate, leaveType) {
+                let url = `/attendance/get-leave-attendances/${uid}/?`;
+                if (startDate) url += `start_date=${startDate}&`;
+                if (leaveType) url += `leave_type=${leaveType}`;
+
+                fetch(url)
                     .then(response => response.json())
                     .then(data => {
                         const cardsContainer = document.getElementById("leave-attendance-cards");
-                        cardsContainer.innerHTML = ""; // ล้างข้อมูลเก่า
+                        cardsContainer.innerHTML = "";
                         if (data.length > 0) {
                             data.forEach(attendance => {
                                 const card = document.createElement("div");
@@ -177,6 +220,9 @@
                                                 ประเภทวันลา: <strong>${attendance.leave_type}</strong>
                                             </p>
                                             <p class="card-text">
+                                                ผู้อนุมัติ: <strong>${attendance.approve_user}</strong>
+                                            </p>
+                                            <p class="card-text">
                                                 วันที่: <strong>${attendance.start_date} - ${attendance.end_date}</strong>
                                             </p>
                                             <p class="card-text flex-grow-1">
@@ -185,9 +231,9 @@
                                             <p class="card-text">
                                                 สถานะ:
                                                 <span class="badge ${
-                                                    attendance.status === 'approved' ? 'bg-success' :
-                                                    attendance.status === 'pending' ? 'bg-warning text-dark' :
-                                                    attendance.status === 'rejected' ? 'bg-danger' : 'bg-secondary'
+                                                    attendance.status === 'อนุมัติ' ? 'bg-success' :
+                                                    attendance.status === 'รออนุมัติ' ? 'bg-warning text-dark' :
+                                                    attendance.status === 'ปฏิเสธ' ? 'bg-danger' : 'bg-secondary'
                                                 }">
                                                     ${attendance.status}
                                                 </span>
@@ -200,21 +246,47 @@
                         } else {
                             cardsContainer.innerHTML = `
                                 <div class="col-12 text-center">
-                                    <p class="text-muted">ไม่มีประวัติคำขอการลา</p>
+                                    <p class="text-muted">ไม่มีข้อมูลคำขอการลาตามเงื่อนไข</p>
                                 </div>
                             `;
                         }
                     })
-                    .catch(error => {
-                        console.error("Error fetching leave attendances:", error);
-                        const cardsContainer = document.getElementById("leave-attendance-cards");
-                        cardsContainer.innerHTML = `
-                            <div class="col-12 text-center">
-                                <p class="text-danger">เกิดข้อผิดพลาดในการดึงข้อมูล</p>
-                            </div>
-                        `;
-                    });
+                    .catch(error => console.error("Error fetching leave attendances:", error));
             }
+
+            // ฟังก์ชันล้างข้อมูลค้นหา
+            function resetFilters() {
+                document.getElementById("filter-start-date").value = "";
+                document.getElementById("filter-leave-type").value = "";
+            }
+
+            // เมื่อคลิกปุ่มค้นหา
+            document.getElementById("search-filter").addEventListener("click", function () {
+                const uid = document.getElementById("user-uid").value.trim();
+                const startDate = document.getElementById("filter-start-date").value;
+                const leaveType = document.getElementById("filter-leave-type").value;
+
+                if (!uid) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'กรุณากรอก UID',
+                        text: 'UID จำเป็นต้องระบุ!',
+                    });
+                    return;
+                }
+
+                searchLeaveAttendances(uid, startDate, leaveType);
+            });
+
+            // เมื่อคลิกปุ่มล้าง
+            document.getElementById("reset-filter").addEventListener("click", function () {
+                resetFilters();
+                const uid = document.getElementById("user-uid").value.trim();
+                if (uid) searchLeaveAttendances(uid);
+            });
+
+            // โหลดตัวเลือกประเภทการลาในส่วนกรอง
+            loadFilterLeaveTypes();
 
 
             // โหลดประเภทการลา
@@ -254,7 +326,6 @@
                 // โหลดข้อมูลพนักงานและวันลาคงเหลือ
                 loadEmployeeData(uid);
                 loadLeaveBalances(uid);
-                loadLeaveAttendances(uid);
             });
 
             // ฟังก์ชันส่งคำขอการลา
@@ -266,7 +337,7 @@
                 const reason = document.getElementById("reason").value;
                 const imageFile = document.getElementById("leave-image").files[0];
 
-                if (!uid || !startDate || !endDate || !leaveType || !reason) {
+                if (!uid || !startDate || !endDate || !leaveType || !reason || !imageFile) {
                     Swal.fire({
                         icon: 'error',
                         title: 'ข้อมูลไม่ครบถ้วน...',
