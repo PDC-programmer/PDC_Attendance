@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.conf import settings
 from linebot import LineBotApi
-from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction, TextSendMessage
+from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction, TextSendMessage, URIAction
 from datetime import datetime
 from django.contrib.auth.decorators import login_required
 
@@ -185,7 +185,7 @@ def leave_request_view(request):
                                 URIAction(
                                     label="ดูรายละเอียด",
                                     uri=f"{settings.SITE_URL}/attendance/leave-detail/{leave_record.id}/"
-                                )
+                                ),
                             ]
                         )
                     )
