@@ -15,11 +15,29 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.shortcuts import render
 from django.urls import include, path
+from django.conf import settings
+from django.conf.urls.static import static
+
+
+def home(request):
+    return render(request, 'account/home.html')
+
+
+# def login_view(request):
+#     return render(request, 'account/login.html', {'LINE_LOG_IN_CHANNEL_ID': settings.LINE_LOG_IN_CHANNEL_ID})
 
 
 urlpatterns = [
+    path('', home),
+    # path('accounts/login/', login_view),
     path('attendance/', include('attendance_app.urls')),
     path('line/', include('line_app.urls')),
     path('admin/', admin.site.urls),
+    path('accounts/', include('allauth.urls')),  # Add this for allauth
 ]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

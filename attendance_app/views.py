@@ -1,5 +1,5 @@
-from django.shortcuts import render
-from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse, HttpResponseForbidden
 from user_app.models import User, BsnStaff
 from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveType
 from django.views.decorators.csrf import csrf_exempt
@@ -8,6 +8,7 @@ from django.conf import settings
 from linebot import LineBotApi
 from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction, TextSendMessage
 from datetime import datetime
+from django.contrib.auth.decorators import login_required
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -181,6 +182,10 @@ def leave_request_view(request):
                                     display_text=f"ปฏิเสธคำขอการลารหัส: {leave_record.id}",
                                     data=f"action=reject&leave_id={leave_record.id}"
                                 ),
+                                URIAction(
+                                    label="ดูรายละเอียด",
+                                    uri=f"{settings.SITE_URL}/attendance/leave-detail/{leave_record.id}/"
+                                )
                             ]
                         )
                     )
@@ -204,6 +209,10 @@ def leave_request_view(request):
                                         label="ยกเลิก",
                                         display_text=f"ยกเลิกคำขอการลารหัส: {leave_record.id}",
                                         data=f"action=cancel&leave_id={leave_record.id}"
+                                    ),
+                                    URIAction(
+                                        label="ดูรายละเอียด",
+                                        uri=f"{settings.SITE_URL}/attendance/leave-detail/{leave_record.id}/"
                                     )
                                 ]
                             )
@@ -221,3 +230,56 @@ def leave_request_view(request):
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
 
     return render(request, "attendance/leave_request.html")
+
+
+@login_required
+def leave_request_detail(request, leave_id):
+    # Fetch LeaveAttendance object
+    leave_request = get_object_or_404(LeaveAttendance, id=leave_id)
+
+    # Verify that the logged-in user is either the approver or the requester
+    if request.user != leave_request.approve_user and request.user != leave_request.user:
+        return HttpResponseForbidden("คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้ !")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "approve" and request.user == leave_request.approve_user:
+            if leave_request.status != "approved":
+                leave_request.status = "approved"
+
+                # Deduct leave balance
+                leave_balance = LeaveBalance.objects.filter(
+                    user=leave_request.user, leave_type=leave_request.leave_type
+                ).first()
+
+                leave_request.save()
+                return JsonResponse({"message": "อนุมัติคำขออนุมัติเสร็จสิ้น"}, status=200)
+            else:
+                return JsonResponse({"error": "อนุมัติคำขออนุมัติแล้ว"}, status=400)
+
+        elif action == "reject" and request.user == leave_request.approve_user:
+            if leave_request.status != "rejected":
+                leave_request.status = "rejected"
+
+                # Deduct leave balance
+                leave_balance = LeaveBalance.objects.filter(
+                    user=leave_request.user, leave_type=leave_request.leave_type
+                ).first()
+
+                leave_request.save()
+                return JsonResponse({"message": "ปฏิเสธคำขออนุมัติเสร็จสิ้น"}, status=200)
+            else:
+                return JsonResponse({"error": "ปฏิเสธคำขออนุมัติแล้ว"}, status=400)
+
+        elif action == "cancel" and request.user == leave_request.user:
+            if leave_request.status in ["pending", "approved"]:
+                leave_request.status = "cancelled"
+                leave_request.save()
+                return JsonResponse({"message": "ยกเลิกคำขออนุมัติเสร็จสิ้น"}, status=200)
+            else:
+                return JsonResponse({"error": "ไม่สามารถยกเลิกคำขออนุมัตินี้ได้"}, status=400)
+
+        return HttpResponseForbidden("คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ !")
+
+    return render(request, "attendance/leave_request_detail.html", {"leave_request": leave_request})

@@ -238,6 +238,7 @@
                                                     ${attendance.status}
                                                 </span>
                                             </p>
+                                            <a href="/attendance/leave-request-detail/${attendance.id}/" class="btn btn-link text-primary mt-2">ดูรายละเอียด</a>
                                         </div>
                                     </div>
                                 `;
@@ -250,6 +251,7 @@
                                 </div>
                             `;
                         }
+                        Swal.close(); // Close loading alert
                     })
                     .catch(error => console.error("Error fetching leave attendances:", error));
             }
