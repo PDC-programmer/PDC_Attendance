@@ -184,7 +184,7 @@ def leave_request_view(request):
                                 ),
                                 URIAction(
                                     label="ดูรายละเอียด",
-                                    uri=f"{settings.SITE_URL}/attendance/leave-detail/{leave_record.id}/"
+                                    uri=f"https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-detail/{leave_record.id}/"
                                 ),
                             ]
                         )
@@ -212,7 +212,7 @@ def leave_request_view(request):
                                     ),
                                     URIAction(
                                         label="ดูรายละเอียด",
-                                        uri=f"{settings.SITE_URL}/attendance/leave-detail/{leave_record.id}/"
+                                        uri=f"https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-detail/{leave_record.id}/"
                                     )
                                 ]
                             )
