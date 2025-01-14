@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Request Detail</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f2f2f2;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #007bff;
+        }
+        .card {
+            border: none;
+            background-color: #f8f9fa;
+        }
+        .card img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+        .badge {
+            font-size: 0.9rem;
+        }
+        .btn {
+            font-size: 1rem;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">รายละเอียดคำขอการลา</h1>
+
+        <!-- Leave Request Details -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title text-primary">รหัสคำขอ: {{ leave_request.id }}</h5>
+
+                <div class="text-center mb-3">
+                    {% if leave_request.image %}
+                    <img src="{{ leave_request.image.url }}" alt="Attached Image">
+                    {% else %}
+                    <p class="text-muted">ไม่มีรูปภาพแนบ</p>
+                    {% endif %}
+                </div>
+
+                <p><strong>ชื่อผู้ขอ:</strong> {{ leave_request.user.username }}</p>
+                <p><strong>ประเภทวันลา:</strong> {{ leave_request.leave_type.th_name }}</p>
+                <p><strong>วันที่:</strong> {{ leave_request.start_date }} ถึง {{ leave_request.end_date }}</p>
+                <p><strong>เหตุผล:</strong> {{ leave_request.reason }}</p>
+                <p>
+                    <strong>สถานะ:</strong>
+                    <span class="badge
+                        {% if leave_request.status == 'approved' %} bg-success
+                        {% elif leave_request.status == 'pending' %} bg-warning text-dark
+                        {% elif leave_request.status == 'rejected' %} bg-danger
+                        {% else %} bg-secondary {% endif %}">
+                        {{ leave_request.get_status_display }}
+                    </span>
+                </p>
+
+                <!-- Approver Actions -->
+                {% if request.user == leave_request.approve_user and leave_request.status == 'pending' %}
+                <div class="d-flex gap-2 justify-content-center mt-3">
+                    <button id="approve-btn" class="btn btn-success">อนุมัติ</button>
+                    <button id="reject-btn" class="btn btn-danger">ปฏิเสธ</button>
+                </div>
+                {% endif %}
+
+                <!-- Requester Actions -->
+                {% if request.user == leave_request.user and leave_request.status == 'pending' %}
+                <button id="cancel-btn" class="btn btn-warning w-100 mt-3">ยกเลิกคำขอ</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const approveBtn = document.getElementById("approve-btn");
+            const rejectBtn = document.getElementById("reject-btn");
+            const cancelBtn = document.getElementById("cancel-btn");
+
+            const csrfToken = "{{ csrf_token }}";
+            const leaveId = "{{ leave_request.id }}";
+
+            if (approveBtn) {
+                approveBtn.addEventListener("click", () => handleAction("approve"));
+            }
+
+            if (rejectBtn) {
+                rejectBtn.addEventListener("click", () => handleAction("reject"));
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener("click", () => handleAction("cancel"));
+            }
+
+            function handleAction(action) {
+                Swal.fire({
+                    title: "ยืนยันการดำเนินการ",
+                    text: `คุณต้องการ ${action === "approve" ? "อนุมัติ" : action === "reject" ? "ปฏิเสธ" : "ยกเลิก"} คำขอนี้?`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "ใช่",
+                    cancelButtonText: "ไม่",
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch(`/attendance/leave-request-detail/${leaveId}/`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/x-www-form-urlencoded",
+                                "X-CSRFToken": csrfToken,
+                            },
+                            body: new URLSearchParams({ action }),
+                        })
+                            .then((response) => response.json())
+                            .then((data) => {
+                                if (data.message) {
+                                    Swal.fire("สำเร็จ", data.message, "success").then(() => {
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire("ผิดพลาด", data.error || "มีบางอย่างผิดพลาด", "error");
+                                }
+                            });
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
