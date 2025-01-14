@@ -169,6 +169,8 @@ def leave_request_view(request):
                     TemplateSendMessage(
                         alt_text=f"คำขอการลาของ {user_fullname}",
                         template=ButtonsTemplate(
+                            thumbnail_image_url=leave_record.image.url if leave_record.image else None,
+                            # Add image URL here
                             title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
                             text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
                             actions=[
@@ -202,6 +204,8 @@ def leave_request_view(request):
                         TemplateSendMessage(
                             alt_text=f"คำขอการลาของ {user_fullname}",
                             template=ButtonsTemplate(
+                                thumbnail_image_url=leave_record.image.url if leave_record.image else None,
+                                # Add image URL here
                                 title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
                                 text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
                                 actions=[
