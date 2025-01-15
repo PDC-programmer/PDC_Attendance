@@ -47,7 +47,7 @@ STATICFIES_DIRS = [BASE_DIR / 'static']
 
 SITE_ID = 1
 
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/login'
 LOGOUT_REDIRECT_URL = '/'
 
 # Application definition
@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'attendance_app',
     'user_app',
     'line_app',
+    'general_app',
 
     # allauth
     'django.contrib.sites',

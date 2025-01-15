@@ -1,0 +1,237 @@
+{% extends "general/base.html" %}
+
+{% block title %}การขออนุมัติ{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="text-center">คำขออนุมัติการลาของคุณ</h1>
+
+        <!-- Employee Information -->
+        <div class="mb-4">
+            <h4>ข้อมูลพนักงาน</h4>
+            <p><strong>ชื่อ:</strong> <span id="employee-name">Loading...</span></p>
+            <p><strong>ตำแหน่ง:</strong> <span id="employee-title">Loading...</span></p>
+            <p><strong>แผนก:</strong> <span id="employee-department">Loading...</span></p>
+            <p><strong>รหัสพนักงาน:</strong> <span id="employee-staff-code">Loading...</span></p>
+        </div>
+
+        <!-- Leave Request Form -->
+        <form id="leave-request-form" enctype="multipart/form-data">
+            <h4>การบันทึกคำขออนุมัติ</h4>
+            <div class="mb-3">
+                <label for="start-date" class="form-label">เริ่มวันที่</label>
+                <input type="date" class="form-control" id="start-date" name="startDate" required>
+            </div>
+            <div class="mb-3">
+                <label for="end-date" class="form-label">ถึงวันที่</label>
+                <input type="date" class="form-control" id="end-date" name="endDate" required>
+            </div>
+            <div class="mb-3">
+                <label for="leave-type" class="form-label">ประเภทการลา</label>
+                <select class="form-select" id="leave-type" name="type" required>
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="reason" class="form-label">เหตุผล</label>
+                <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="leave-image" class="form-label">รูปภาพ</label>
+                <input type="file" class="form-control" id="leave-image" name="image" accept="image/*">
+            </div>
+            <button type="submit" class="btn btn-primary w-100">ยืนยัน</button>
+        </form>
+
+        <!-- Leave Balances -->
+        <div class="mt-5">
+            <h4>วันลาคงเหลือ</h4>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ประเภทการลา</th>
+                        <th>สิทธิ์ที่ได้รับ</th>
+                        <th>สิทธิ์คงเหลือ</th>
+                    </tr>
+                </thead>
+                <tbody id="leave-balance-table">
+                    <tr>
+                        <td colspan="3" class="text-center">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Leave Request Filters -->
+        <div class="mb-4">
+            <h4>ค้นหาและกรองคำขออนุมัติ</h4>
+            <form id="filter-form">
+                <div class="mb-3">
+                    <label for="filter-start-date" class="form-label">เริ่มวันที่</label>
+                    <input type="date" id="filter-start-date" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="filter-leave-type" class="form-label">ประเภทการลา</label>
+                    <select id="filter-leave-type" class="form-select">
+                        <option value="">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <button type="button" id="search-button" class="btn btn-primary w-50 me-2">ค้นหา</button>
+                    <button type="button" id="reset-button" class="btn btn-secondary w-50">ล้าง</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Leave History -->
+        <div class="mt-5">
+            <h4>ประวัติคำขออนุมัติ</h4>
+            <div id="leave-history" class="d-flex flex-column">
+                <p class="text-center text-muted">กรุณาค้นหาเพื่อดูข้อมูล</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const leaveTypeSelect = document.getElementById("leave-type");
+            const leaveBalanceTable = document.getElementById("leave-balance-table");
+            const leaveForm = document.getElementById("leave-request-form");
+            const leaveHistory = document.getElementById("leave-history");
+            const searchButton = document.getElementById("search-button");
+            const resetButton = document.getElementById("reset-button");
+            const filterForm = document.getElementById("filter-form");
+
+            // Load employee information
+            fetch("/attendance/get-staff/")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        Swal.fire("Error", data.error, "error");
+                    } else {
+                        document.getElementById("employee-name").textContent = `${data.staff_fname} ${data.staff_lname}`;
+                        document.getElementById("employee-title").textContent = data.staff_title || "-";
+                        document.getElementById("employee-department").textContent = data.staff_department || "-";
+                        document.getElementById("employee-staff-code").textContent = data.staff_code || "-";
+                    }
+                })
+                .catch(err => console.error("Error loading employee information:", err));
+
+            // Load leave types
+            fetch("/attendance/get-leave-types/")
+                .then(response => response.json())
+                .then(data => {
+                    leaveTypeSelect.innerHTML = "";
+                    data.forEach(type => {
+                        const option = document.createElement("option");
+                        option.value = type.id;
+                        option.textContent = type.th_name;
+                        leaveTypeSelect.appendChild(option);
+                    });
+                })
+                .catch(err => console.error("Error loading leave types:", err));
+
+            // Load leave balances
+            fetch("/attendance/get-leave-balances/")
+                .then(response => response.json())
+                .then(data => {
+                    leaveBalanceTable.innerHTML = "";
+                    data.forEach(balance => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${balance.leave_type}</td>
+                            <td>${balance.total_days}</td>
+                            <td>${balance.remaining_days}</td>
+                        `;
+                        leaveBalanceTable.appendChild(row);
+                    });
+                })
+                .catch(err => console.error("Error loading leave balances:", err));
+
+            // Search and filter leave history
+            searchButton.addEventListener("click", () => {
+                const startDate = document.getElementById("filter-start-date").value;
+                const leaveType = document.getElementById("filter-leave-type").value;
+
+                let url = "/attendance/get-leave-attendances/?";
+                if (startDate) url += `start_date=${startDate}&`;
+                if (leaveType) url += `leave_type=${leaveType}`;
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        leaveHistory.innerHTML = "";
+                        if (data.length > 0) {
+                            data.forEach(request => {
+                                const card = document.createElement("div");
+                                card.className = "card";
+                                card.innerHTML = `
+                                    <div class="card-body">
+                                        <h5 class="card-title">รหัสคำขออนุมัติ: ${request.id}</h5>
+                                        <p class="card-text">ประเภทการลา: ${request.leave_type}</p>
+                                        <p class="card-text">ช่วงเวลา: ${request.start_date} - ${request.end_date}</p>
+                                        <p class="card-text">เหตุผล: ${request.reason}</p>
+                                        <p class="card-text">ผู้อนุมัติ: ${request.approve_user}</p>
+                                        <p class="card-text">
+                                            สถานะ: <span class="badge ${getStatusBadge(request.status)}">${request.status}</span>
+                                        </p>
+                                        <a href="/attendance/leave-request-detail/${request.id}/" class="btn btn-sm btn-secondary w-25">ดูรายละเอียด</a>
+                                    </div>
+                                `;
+                                leaveHistory.appendChild(card);
+                            });
+                        } else {
+                            leaveHistory.innerHTML = `<p class="text-center text-muted">ไม่พบข้อมูลคำขอการลาตามเงื่อนไข</p>`;
+                        }
+                    })
+                    .catch(err => console.error("Error filtering leave history:", err));
+            });
+
+            // Reset filters
+            resetButton.addEventListener("click", () => {
+                filterForm.reset();
+                leaveHistory.innerHTML = `<p class="text-center text-muted">กรุณาค้นหาเพื่อดูข้อมูล</p>`;
+            });
+
+            // Helper function for status badge
+            function getStatusBadge(status) {
+                switch (status.toLowerCase()) {
+                    case "อนุมัติ":
+                        return "bg-success";
+                    case "รออนุมัติ":
+                        return "bg-warning text-dark";
+                    case "ปฏิเสธ":
+                        return "bg-danger";
+                    default:
+                        return "bg-secondary";
+                }
+            }
+
+            // Submit leave request
+            leaveForm.addEventListener("submit", e => {
+                e.preventDefault();
+
+                const formData = new FormData(leaveForm);
+
+                fetch("/attendance/leave-request-auth/", {
+                    method: "POST",
+                    body: formData,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        Swal.fire("Error", data.error, "error");
+                    } else {
+                        Swal.fire("Success", "บันทึกคำขออนุมัติเสร็จสิ้น", "success").then(() => {
+                            location.reload();
+                        });
+                    }
+                })
+                .catch(err => {
+                    Swal.fire("Error", "An error occurred. Please try again.", "error");
+                    console.error("Error submitting leave request:", err);
+                });
+            });
+        });
+    </script>
+{% endblock %}

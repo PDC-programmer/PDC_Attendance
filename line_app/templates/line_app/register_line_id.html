@@ -1,0 +1,138 @@
+{% extends "general/base.html" %}
+
+{% block title %}ลงทะเบียน{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <div class="card text-center">
+            <div class="card-header">
+                <h3>ลงทะเบียน</h3>
+            </div>
+            <div class="card-body">
+                <!-- Employee Code Input Form -->
+                <form class="mt-3">
+                    <div class="mb-3">
+                        <label for="staff-code" class="form-label">รหัสพนักงาน</label>
+                        <input type="text" class="form-control" id="staff-code" placeholder="กรอกรหัสพนักงานของคุณ...">
+                    </div>
+                    <button type="button" id="submit-staff-code" class="btn btn-primary">ยืนยัน</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById("submit-staff-code").addEventListener("click", () => {
+            const staffCode = document.getElementById("staff-code").value;
+
+            if (!staffCode) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ข้อมูลไม่ครบถ้วน...',
+                    text: 'กรุณากรอกข้อมูลให้ครบถ้วน !',
+                });
+                return;
+            }
+
+            // Show loading alert
+            Swal.fire({
+                title: 'กำลังค้นหาข้อมูล...',
+                text: 'กรุณารอสักครู่...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // ดึงข้อมูลจากเซิร์ฟเวอร์
+            fetch(`/line/get-staff-info/${staffCode}/`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: data.error,
+                    });
+                } else {
+                    // แสดงข้อมูลเพื่อยืนยัน
+                    Swal.fire({
+                        title: 'ยืนยันการลงทะเบียน',
+                        html: `
+                            <p><strong>ชื่อ:</strong> ${data.staff_fname} ${data.staff_lname}</p>
+                            <p><strong>ตำแหน่ง:</strong> ${data.staff_title}</p>
+                            <p><strong>แผนก:</strong> ${data.staff_department}</p>
+                            <p><strong>รหัสพนักงาน:</strong> ${data.staff_code}</p>
+                        `,
+                        showCancelButton: true,
+                        confirmButtonText: 'ยืนยัน',
+                        cancelButtonText: 'ยกเลิก',
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Show loading alert
+                            Swal.fire({
+                                title: 'กำลังบันทึกข้อมูล...',
+                                text: 'กรุณารอสักครู่...',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+                            // หากผู้ใช้ยืนยัน ส่งคำขอการลงทะเบียน
+                            fetch("/line/register-line-id/", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                    staffCode
+                                }),
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.error) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'เกิดข้อผิดพลาด',
+                                        text: data.error,
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'เสร็จสมบูรณ์',
+                                        text: 'ลงทะเบียนเสร็จสมบูรณ์ !',
+                                    }).then(function() {
+                                    window.location.href = "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-request/";
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'เกิดข้อผิดพลาด',
+                                    text: 'ไม่สามารถลงทะเบียนได้ !',
+                                });
+                                console.error("Error:", error);
+                            });
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถดึงข้อมูลพนักงานได้ !',
+                });
+                console.error("Error:", error);
+            });
+        });
+    });
+</script>
+{% endblock %}

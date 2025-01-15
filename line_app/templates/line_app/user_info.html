@@ -7,6 +7,8 @@
 <ul>
   {% for x in users %}
     <li>{{ x }}</li>
+    <li>{{ x.user.uid }}</li>
+    <li><img src="{{ x.extra_data.picture }}" alt="Attached Image"></li>
   {% endfor %}
 </ul>
 

@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -11,10 +11,12 @@ from linebot.models import (
     MessageEvent, FollowEvent, PostbackEvent, TextMessage,
     PostbackAction, TemplateSendMessage, ButtonsTemplate, TextSendMessage
 )
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 import json
 from django.http import JsonResponse
 from django.template import loader
+from django.contrib.auth.decorators import login_required
+from allauth.socialaccount.models import SocialAccount
 
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(settings.LINE_CHANNEL_SECRET)
@@ -24,6 +26,25 @@ STATUS_DISPLAY = {
     'approved': 'อนุมัติ',
     'rejected': 'ปฏิเสธ',
 }
+
+
+@login_required(login_url='log-in')
+@csrf_exempt
+def register_line_id(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        staff_code = data.get("staffCode")
+
+        staff = BsnStaff.objects.get(staff_code=staff_code)
+        if not staff:
+            return JsonResponse({"error": "Staff not found"}, status=404)
+        else:
+            staff.django_usr_id = request.user
+            staff.save()
+            return JsonResponse({"success": True, "message": "Registration successful."}, status=200)
+
+    return render(request, 'line_app/register_line_id.html')
+
 
 @csrf_exempt
 def register(request):
@@ -62,11 +83,13 @@ def get_staff_info(request, staff_code):
     }, status=200)
 
 
+@login_required
 def user_info(request):
-    users = User.objects.all().values()
+    users = request.user
+    social_account = SocialAccount.objects.filter(user=users)
     template = loader.get_template('line_app/user_info.html')
     context = {
-        'users': users,
+        'users': social_account,
     }
     return HttpResponse(template.render(context, request))
 
@@ -163,7 +186,8 @@ def handle_postback(event):
         )
 
         # Optionally notify the requester
-        requester_line_id = leave_record.user.uid
+        social_account = SocialAccount.objects.filter(user=leave_record.user, provider="line").first()
+        requester_line_id = social_account.uid if social_account else None
         if requester_line_id and action in ["approve", "reject"]:
             line_bot_api.push_message(
                 requester_line_id,
