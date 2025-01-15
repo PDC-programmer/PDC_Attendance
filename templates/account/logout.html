@@ -1,0 +1,17 @@
+{% extends "general/base.html" %}
+
+{% block title %}ออกจากระบบ{% endblock %}
+
+{% block content %}
+    <div class="logout-container">
+        <h1>ออกจากระบบ</h1>
+        <p>คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?</p>
+        <div class="row">
+            <form method="post" action="{% url 'account_logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">ยืนยัน</button>
+                <a href="{% url 'home' %}" class="btn btn-sm btn-secondary">ยกเลิก</a>
+            </form>
+        </div>
+    </div>
+{% endblock %}

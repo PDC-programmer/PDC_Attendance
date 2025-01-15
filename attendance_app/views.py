@@ -9,6 +9,7 @@ from linebot import LineBotApi
 from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction, TextSendMessage, URIAction
 from datetime import datetime
 from django.contrib.auth.decorators import login_required
+from allauth.socialaccount.models import SocialAccount
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -25,14 +26,10 @@ def get_leave_types(request):
     return JsonResponse(data, safe=False)
 
 
-def get_leave_balances(request, user_id):
-    # ค้นหา User ที่มี UID ตรงกับ userID
-    user = User.objects.filter(uid=user_id).first()
-    if not user:
-        return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ"}, status=404)
-
+@login_required
+def get_leave_balances(request):
     # ดึงข้อมูลประเภทการลา
-    leave_balances = LeaveBalance.objects.filter(user=user)
+    leave_balances = LeaveBalance.objects.filter(user=request.user)
     data = [{"leave_type": leave.leave_type.th_name,
              "total_days": leave.total_days,
              "remaining_days": leave.remaining_days
@@ -40,13 +37,9 @@ def get_leave_balances(request, user_id):
     return JsonResponse(data, safe=False)
 
 
-def get_staff(request, user_id):
-    # ค้นหา User ที่มี UID ตรงกับ userID
-    user = User.objects.filter(uid=user_id).first()
-    if not user:
-        return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ"}, status=404)
-
-    staff = BsnStaff.objects.filter(django_usr_id=user).first()
+@login_required
+def get_staff(request):
+    staff = BsnStaff.objects.filter(django_usr_id=request.user).first()
     if not staff:
         return JsonResponse({"error": "ไม่พบข้อมูลพนักงาน"}, status=404)
     return JsonResponse({
@@ -58,13 +51,9 @@ def get_staff(request, user_id):
     }, status=200)
 
 
-def get_leave_attendances(request, user_id):
-    # ค้นหา User ที่มี UID ตรงกับ userID
-    user = User.objects.filter(uid=user_id).first()
-    if not user:
-        return JsonResponse({"error": "ไม่พบข้อมูลผู้ใช้งานในระบบ"}, status=404)
-
-    leave_attendances = LeaveAttendance.objects.filter(user=user)
+@login_required
+def get_leave_attendances(request):
+    leave_attendances = LeaveAttendance.objects.filter(user=request.user)
 
     # รับค่า start_date, end_date และ leave_type จาก query parameters
     start_date = request.GET.get("start_date")
@@ -236,10 +225,143 @@ def leave_request_view(request):
     return render(request, "attendance/leave_request.html")
 
 
-@login_required
+@login_required(login_url='log-in')
+@csrf_exempt
+def leave_request_view_auth(request):
+    if request.method == "POST":
+        # ตรวจสอบการส่งข้อมูลแบบ FormData
+        data = request.POST
+        image = request.FILES.get("image")
+
+        start_date = data.get("startDate")
+        end_date = data.get("endDate")
+        reason = data.get("reason")
+        leave_type_id = data.get("type")
+
+        days = (datetime.strptime(end_date, "%Y-%m-%d") - datetime.strptime(start_date, "%Y-%m-%d")).days + 1
+
+        user = SocialAccount.objects.filter(user=request.user).first()
+        user_id = user.uid
+
+        # ตรวจสอบว่าประเภทการลามีอยู่ในระบบ
+        leave_type = LeaveType.objects.filter(id=leave_type_id).first()
+        if not leave_type:
+            return JsonResponse({"error": "ประเภทวันลาไม่ถูกต้อง !"}, status=400)
+
+        leave_balance = LeaveBalance.objects.filter(user=request.user, leave_type=leave_type_id).first()
+        if not leave_balance:
+            return JsonResponse({"error": "ไม่พบข้อมูสิทธิ์วันลาคงเหลือ !"}, status=404)
+
+        if not leave_balance.remaining_days >= days:
+            return JsonResponse({"error": f"{leave_type.th_name}เหลือไม่เพียงพอ !"}, status=404)
+
+        # ค้นหาผู้อนุมัติจากตาราง BsnStaff
+        staff = BsnStaff.objects.filter(django_usr_id=request.user).first()
+        if not staff or not staff.mng_staff_id:
+            return JsonResponse({"error": "ไม่พบผู้อนุมัติของพนักงาน !"}, status=404)
+
+        approver = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
+        approver_person = User.objects.filter(id=approver.django_usr_id.id).first()
+        approver_user = SocialAccount.objects.filter(user=approver_person).first()
+        if not approver_user:
+            return JsonResponse({"error": "ไม่พบผู้อนุมัติ !"}, status=404)
+
+        # สร้าง LeaveAttendance
+        leave_record = LeaveAttendance.objects.create(
+            user=user.user,
+            approve_user=approver_user.user,
+            start_date=start_date,
+            end_date=end_date,
+            reason=reason,
+            leave_type=leave_type,
+            image=image,
+        )
+
+        # ส่ง Template Message ถึง Approver
+        if approver_user.uid:
+            user_fullname = f"{staff.staff_fname} {staff.staff_lname}" if staff.staff_fname and staff.staff_lname else request.user.username
+            approver_fullname = f"{approver.staff_fname} {approver.staff_lname}" if approver.staff_fname and approver.staff_lname else approver_user.user.username
+
+            try:
+                line_bot_api.push_message(
+                    approver_user.uid,
+                    TemplateSendMessage(
+                        alt_text=f"คำขอการลาของ {user_fullname}",
+                        template=ButtonsTemplate(
+                            # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
+                            # Add image URL here
+                            title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
+                            text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
+                            actions=[
+                                PostbackAction(
+                                    label="อนุมัติ",
+                                    display_text=f"อนุมัติคำขอการลารหัส: {leave_record.id}",
+                                    data=f"action=approve&leave_id={leave_record.id}"
+                                ),
+                                PostbackAction(
+                                    label="ปฏิเสธ",
+                                    display_text=f"ปฏิเสธคำขอการลารหัส: {leave_record.id}",
+                                    data=f"action=reject&leave_id={leave_record.id}"
+                                ),
+                                URIAction(
+                                    label="ดูรายละเอียด",
+                                    uri=f"https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-request-detail/{leave_record.id}/"
+                                ),
+                            ]
+                        )
+                    )
+                )
+            except Exception as e:
+                return JsonResponse({"error": f"Failed to send message: {str(e)}"}, status=500)
+
+            if not request.user:
+                return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ"}, status=404)
+            else:
+                try:
+                    line_bot_api.push_message(
+                        user_id,
+                        TemplateSendMessage(
+                            alt_text=f"คำขอการลาของ {user_fullname}",
+                            template=ButtonsTemplate(
+                                # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
+                                # Add image URL here
+                                title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
+                                text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
+                                actions=[
+                                    PostbackAction(
+                                        label="ยกเลิก",
+                                        display_text=f"ยกเลิกคำขอการลารหัส: {leave_record.id}",
+                                        data=f"action=cancel&leave_id={leave_record.id}"
+                                    ),
+                                    URIAction(
+                                        label="ดูรายละเอียด",
+                                        uri=f"https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-request-detail/{leave_record.id}/"
+                                    ),
+                                ]
+                            )
+                        )
+                    )
+                except Exception as e:
+                    return JsonResponse({"error": f"Failed to send message: {str(e)}"}, status=500)
+                # line_bot_api.push_message(
+                #     user_id,
+                #     TextSendMessage(
+                #         text=f"คำขอการลา: {leave_record.id}\nกำลังรอการพิจารณา\nผู้อนุมัติ: {approver_fullname}"
+                #     )
+                # )
+
+        return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
+
+    return render(request, "attendance/leave_request_auth.html")
+
+
+@login_required(login_url='log-in')
 def leave_request_detail(request, leave_id):
     # Fetch LeaveAttendance object
     leave_request = get_object_or_404(LeaveAttendance, id=leave_id)
+
+    staff = BsnStaff.objects.filter(django_usr_id=leave_request.user.id).first()
+    approver = BsnStaff.objects.filter(django_usr_id=leave_request.approve_user.id).first()
 
     # Verify that the logged-in user is either the approver or the requester
     if request.user != leave_request.approve_user and request.user != leave_request.user:
@@ -286,4 +408,4 @@ def leave_request_detail(request, leave_id):
 
         return HttpResponseForbidden("คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ !")
 
-    return render(request, "attendance/leave_request_detail.html", {"leave_request": leave_request})
+    return render(request, "attendance/leave_request_detail.html", {"leave_request": leave_request, "staff": staff, "approver": approver})

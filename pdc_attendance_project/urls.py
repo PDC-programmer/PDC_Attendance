@@ -21,17 +21,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 
-def home(request):
-    return render(request, 'account/home.html')
-
-
 # def login_view(request):
 #     return render(request, 'account/login.html', {'LINE_LOG_IN_CHANNEL_ID': settings.LINE_LOG_IN_CHANNEL_ID})
 
 
 urlpatterns = [
-    path('', home),
     # path('accounts/login/', login_view),
+    path('', include('general_app.urls')),
     path('attendance/', include('attendance_app.urls')),
     path('line/', include('line_app.urls')),
     path('admin/', admin.site.urls),

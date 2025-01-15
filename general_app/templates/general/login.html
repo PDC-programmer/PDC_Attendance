@@ -1,0 +1,16 @@
+{% extends 'general/base.html' %}
+{% load socialaccount %}
+
+
+{% block content %}
+<br>
+
+
+<div class="container text-center">
+  <h4>โปรแกรมจัดการเวลางาน</h4>
+
+  <a href="{% provider_login_url 'line' method='oauth2' %}" class="btn btn-success">เข้าสู่ระบบ <img src="https://www.vectorlogo.zone/logos/line/line-official.svg" width="24" height="24"></a>
+
+</div>
+
+{% endblock %}
