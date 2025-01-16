@@ -3,21 +3,23 @@
 {% block title %}การขออนุมัติ{% endblock %}
 
 {% block content %}
-    <div class="container">
+<div class="d-flex justify-content-center align-items-center">
+<div class="container " style="width: 95%;">
         <h1 class="text-center">คำขออนุมัติการลาของคุณ</h1>
 
         <!-- Employee Information -->
-        <div class="mb-4">
-            <h4>ข้อมูลพนักงาน</h4>
-            <p><strong>ชื่อ:</strong> <span id="employee-name">Loading...</span></p>
-            <p><strong>ตำแหน่ง:</strong> <span id="employee-title">Loading...</span></p>
-            <p><strong>แผนก:</strong> <span id="employee-department">Loading...</span></p>
-            <p><strong>รหัสพนักงาน:</strong> <span id="employee-staff-code">Loading...</span></p>
+        <div class="card">
+            <h4 class="text-center">ข้อมูลพนักงาน</h4>
+            <p class="mx-4"><strong>ชื่อ:</strong> <span id="employee-name">Loading...</span></p>
+            <p class="mx-4"><strong>ตำแหน่ง:</strong> <span id="employee-title">Loading...</span></p>
+            <p class="mx-4"><strong>แผนก:</strong> <span id="employee-department">Loading...</span></p>
+            <p class="mx-4"><strong>รหัสพนักงาน:</strong> <span id="employee-staff-code">Loading...</span></p>
         </div>
-
+        <hr>
         <!-- Leave Request Form -->
+
         <form id="leave-request-form" enctype="multipart/form-data">
-            <h4>การบันทึกคำขออนุมัติ</h4>
+            <h4 class="text-center">การบันทึกคำขออนุมัติ</h4>
             <div class="mb-3">
                 <label for="start-date" class="form-label">เริ่มวันที่</label>
                 <input type="date" class="form-control" id="start-date" name="startDate" required>
@@ -40,31 +42,33 @@
                 <label for="leave-image" class="form-label">รูปภาพ</label>
                 <input type="file" class="form-control" id="leave-image" name="image" accept="image/*">
             </div>
-            <button type="submit" class="btn btn-primary w-100">ยืนยัน</button>
+            <button type="submit" class="btn btn-primary" style="width: 25%;">ยืนยัน</button>
         </form>
+        <hr>
 
         <!-- Leave Balances -->
-        <div class="mt-5">
-            <h4>วันลาคงเหลือ</h4>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>ประเภทการลา</th>
-                        <th>สิทธิ์ที่ได้รับ</th>
-                        <th>สิทธิ์คงเหลือ</th>
-                    </tr>
-                </thead>
-                <tbody id="leave-balance-table">
-                    <tr>
-                        <td colspan="3" class="text-center">Loading...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <h4 class="text-center">วันลาคงเหลือ</h4>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ประเภทการลา</th>
+                    <th>สิทธิ์ที่ได้รับ</th>
+                    <th>สิทธิ์คงเหลือ</th>
+                </tr>
+            </thead>
+            <tbody id="leave-balance-table">
+                <tr>
+<!--                    <td colspan="3" class="text-center">Loading...</td>-->
+                    <td colspan="3" class="text-center text-muted">ไม่พบข้อมูลสิทธิ์คงเหลือ</td>
+                </tr>
+            </tbody>
+        </table>
+        <hr>
+
 
         <!-- Leave Request Filters -->
         <div class="mb-4">
-            <h4>ค้นหาและกรองคำขออนุมัติ</h4>
+            <h4 class="text-center">ค้นหาและกรองคำขออนุมัติ</h4>
             <form id="filter-form">
                 <div class="mb-3">
                     <label for="filter-start-date" class="form-label">เริ่มวันที่</label>
@@ -76,21 +80,24 @@
                         <option value="">ทั้งหมด</option>
                     </select>
                 </div>
-                <div class="d-flex justify-content-between">
-                    <button type="button" id="search-button" class="btn btn-primary w-50 me-2">ค้นหา</button>
-                    <button type="button" id="reset-button" class="btn btn-secondary w-50">ล้าง</button>
-                </div>
+<!--                <div class="d-flex justify-content-between gap-2">-->
+                    <button type="button" id="search-button" class="btn btn-primary " style="width: 25%;">ค้นหา</button>
+                    <button type="button" id="reset-button" class="btn btn-secondary " style="width: 25%;">ล้าง</button>
+<!--                    <button type="button" id="asd-button" class="btn btn-secondary w-50">ล้าง</button>-->
+<!--                </div>-->
             </form>
         </div>
 
         <!-- Leave History -->
-        <div class="mt-5">
-            <h4>ประวัติคำขออนุมัติ</h4>
-            <div id="leave-history" class="d-flex flex-column">
-                <p class="text-center text-muted">กรุณาค้นหาเพื่อดูข้อมูล</p>
+        <h4 class="text-center">ประวัติคำขออนุมัติ</h4>
+        <div id="leave-history" class="d-flex flex-column">
+            <div class="card">
+                <p class="text-center text-muted my-2">กรุณาค้นหาเพื่อดูข้อมูล !</p>
             </div>
         </div>
+
     </div>
+</div>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
@@ -148,6 +155,23 @@
                 })
                 .catch(err => console.error("Error loading leave balances:", err));
 
+            // ฟังก์ชันโหลดตัวเลือกประเภทการลาในส่วนค้นหา
+            function loadFilterLeaveTypes() {
+                fetch("/attendance/get-leave-types/")
+                    .then(response => response.json())
+                    .then(data => {
+                        const filterLeaveTypeSelect = document.getElementById("filter-leave-type");
+                        filterLeaveTypeSelect.innerHTML = '<option value="">ทั้งหมด</option>';
+                        data.forEach(type => {
+                            const option = document.createElement("option");
+                            option.value = type.id;
+                            option.textContent = type.th_name;
+                            filterLeaveTypeSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error("Error fetching leave types:", error));
+            }
+
             // Search and filter leave history
             searchButton.addEventListener("click", () => {
                 const startDate = document.getElementById("filter-start-date").value;
@@ -167,7 +191,7 @@
                                 card.className = "card";
                                 card.innerHTML = `
                                     <div class="card-body">
-                                        <h5 class="card-title">รหัสคำขออนุมัติ: ${request.id}</h5>
+                                        <h4 class="card-title my-2">รหัสคำขออนุมัติ: ${request.id}</h4>
                                         <p class="card-text">ประเภทการลา: ${request.leave_type}</p>
                                         <p class="card-text">ช่วงเวลา: ${request.start_date} - ${request.end_date}</p>
                                         <p class="card-text">เหตุผล: ${request.reason}</p>
@@ -175,7 +199,7 @@
                                         <p class="card-text">
                                             สถานะ: <span class="badge ${getStatusBadge(request.status)}">${request.status}</span>
                                         </p>
-                                        <a href="/attendance/leave-request-detail/${request.id}/" class="btn btn-sm btn-secondary w-25">ดูรายละเอียด</a>
+                                        <a href="/attendance/leave-request-detail/${request.id}/" class="btn btn-sm btn-secondary" style="width: 30%;">ดูรายละเอียด</a>
                                     </div>
                                 `;
                                 leaveHistory.appendChild(card);
@@ -192,6 +216,9 @@
                 filterForm.reset();
                 leaveHistory.innerHTML = `<p class="text-center text-muted">กรุณาค้นหาเพื่อดูข้อมูล</p>`;
             });
+
+            // โหลดตัวเลือกประเภทการลาในส่วนกรอง
+            loadFilterLeaveTypes();
 
             // Helper function for status badge
             function getStatusBadge(status) {
