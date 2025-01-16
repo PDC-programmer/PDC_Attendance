@@ -47,7 +47,7 @@ STATICFIES_DIRS = [BASE_DIR / 'static']
 
 SITE_ID = 1
 
-LOGIN_REDIRECT_URL = '/login'
+LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 # Application definition
@@ -177,3 +177,9 @@ USE_TZ = False
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 django_heroku.settings(locals())  # Activate Django-Heroku.
+
+# Working hours settings (24-hour format)
+WORKING_HOURS_START = "09:00"
+WORKING_HOURS_END = "18:00"
+
+
