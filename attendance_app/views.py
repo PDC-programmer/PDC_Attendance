@@ -10,6 +10,7 @@ from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction,
 from datetime import datetime
 from django.contrib.auth.decorators import login_required
 from allauth.socialaccount.models import SocialAccount
+from attendance_app.utils import calculate_working_hours  # Import the utility function
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -31,8 +32,8 @@ def get_leave_balances(request):
     # ดึงข้อมูลประเภทการลา
     leave_balances = LeaveBalance.objects.filter(user=request.user)
     data = [{"leave_type": leave.leave_type.th_name,
-             "total_days": leave.total_days,
-             "remaining_days": leave.remaining_days
+             "total_hours": leave.total_hours,
+             "remaining_hours": leave.remaining_hours
              } for leave in leave_balances]
     return JsonResponse(data, safe=False)
 
@@ -56,12 +57,16 @@ def get_leave_attendances(request):
     leave_attendances = LeaveAttendance.objects.filter(user=request.user)
 
     # รับค่า start_date, end_date และ leave_type จาก query parameters
-    start_date = request.GET.get("start_date")
+
+    start_datetime = request.GET.get("start_datetime")
     leave_type_id = request.GET.get("leave_type")
 
     # กรองข้อมูลตาม start_date, และ leave_type
-    if start_date:
-        leave_attendances = leave_attendances.filter(start_date=start_date)
+    if start_datetime:
+        leave_attendances = leave_attendances.filter(
+            start_datetime__lte=start_datetime,
+            end_datetime__gte=start_datetime
+        )
     if leave_type_id:
         leave_attendances = leave_attendances.filter(leave_type_id=leave_type_id)
 
@@ -84,8 +89,8 @@ def get_leave_attendances(request):
         data.append({
             "id": leave.id,
             "approve_user": approver_name,
-            "start_date": leave.start_date,
-            "end_date": leave.end_date,
+            "start_datetime": leave.start_datetime,
+            "end_datetime": leave.end_datetime,
             "leave_type": leave.leave_type.th_name,
             "reason": leave.reason,
             "status": leave.get_status_display(),
@@ -233,12 +238,18 @@ def leave_request_view_auth(request):
         data = request.POST
         image = request.FILES.get("image")
 
-        start_date = data.get("startDate")
-        end_date = data.get("endDate")
+        start_datetime = datetime.strptime(data.get("start_datetime"), "%Y-%m-%dT%H:%M")
+        end_datetime = datetime.strptime(data.get("end_datetime"), "%Y-%m-%dT%H:%M")
         reason = data.get("reason")
         leave_type_id = data.get("type")
 
-        days = (datetime.strptime(end_date, "%Y-%m-%d") - datetime.strptime(start_date, "%Y-%m-%d")).days + 1
+        # Calculate working hours only
+        working_hours = calculate_working_hours(start_datetime, end_datetime)
+
+        if working_hours <= 0:
+            return JsonResponse({"error": "ช่วงเวลาที่เลือกไม่ได้อยู่ในเวลาทำงาน"}, status=400)
+
+        # days = (datetime.strptime(end_date, "%Y-%m-%d") - datetime.strptime(start_date, "%Y-%m-%d")).days + 1
 
         user = SocialAccount.objects.filter(user=request.user).first()
         user_id = user.uid
@@ -252,7 +263,7 @@ def leave_request_view_auth(request):
         if not leave_balance:
             return JsonResponse({"error": "ไม่พบข้อมูสิทธิ์วันลาคงเหลือ !"}, status=404)
 
-        if not leave_balance.remaining_days >= days:
+        if not leave_balance.remaining_hours >= working_hours:
             return JsonResponse({"error": f"{leave_type.th_name}เหลือไม่เพียงพอ !"}, status=404)
 
         # ค้นหาผู้อนุมัติจากตาราง BsnStaff
@@ -270,8 +281,8 @@ def leave_request_view_auth(request):
         leave_record = LeaveAttendance.objects.create(
             user=user.user,
             approve_user=approver_user.user,
-            start_date=start_date,
-            end_date=end_date,
+            start_datetime=start_datetime,
+            end_datetime=end_datetime,
             reason=reason,
             leave_type=leave_type,
             image=image,
@@ -291,7 +302,7 @@ def leave_request_view_auth(request):
                             # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
                             # Add image URL here
                             title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
-                            text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
+                            text=f"ประเภท: {leave_type.th_name}\nวัน: {datetime.date(start_datetime)} - {datetime.date(end_datetime)}\nคงเหลือ: {leave_balance.remaining_hours}",
                             actions=[
                                 PostbackAction(
                                     label="อนุมัติ",
@@ -326,7 +337,7 @@ def leave_request_view_auth(request):
                                 # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
                                 # Add image URL here
                                 title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
-                                text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
+                                text=f"ประเภท: {leave_type.th_name}\nวัน: {datetime.date(start_datetime)} - {datetime.date(end_datetime)}\nลา: {working_hours} ชม.",
                                 actions=[
                                     PostbackAction(
                                         label="ยกเลิก",
@@ -408,4 +419,5 @@ def leave_request_detail(request, leave_id):
 
         return HttpResponseForbidden("คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ !")
 
-    return render(request, "attendance/leave_request_detail.html", {"leave_request": leave_request, "staff": staff, "approver": approver})
+    return render(request, "attendance/leave_request_detail.html",
+                  {"leave_request": leave_request, "staff": staff, "approver": approver})

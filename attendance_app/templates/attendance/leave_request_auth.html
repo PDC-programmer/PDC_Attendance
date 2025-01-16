@@ -21,12 +21,12 @@
         <form id="leave-request-form" enctype="multipart/form-data">
             <h4 class="text-center">การบันทึกคำขออนุมัติ</h4>
             <div class="mb-3">
-                <label for="start-date" class="form-label">เริ่มวันที่</label>
-                <input type="date" class="form-control" id="start-date" name="startDate" required>
+                <label for="start-datetime" class="form-label">วันเวลาที่เริ่ม</label>
+                <input type="datetime-local" id="start-datetime" name="start_datetime" class="form-control" step="1800" required>
             </div>
             <div class="mb-3">
-                <label for="end-date" class="form-label">ถึงวันที่</label>
-                <input type="date" class="form-control" id="end-date" name="endDate" required>
+                <label for="end-datetime" class="form-label">วันเวลาที่สิ้นสุด</label>
+                <input type="datetime-local" id="end-datetime" name="end_datetime" class="form-control" step="1800" required>
             </div>
             <div class="mb-3">
                 <label for="leave-type" class="form-label">ประเภทการลา</label>
@@ -47,13 +47,13 @@
         <hr>
 
         <!-- Leave Balances -->
-        <h4 class="text-center">วันลาคงเหลือ</h4>
+        <h4 class="text-center">สิทธิ์คงเหลือ</h4>
         <table class="table table-bordered">
             <thead>
                 <tr>
                     <th>ประเภทการลา</th>
-                    <th>สิทธิ์ที่ได้รับ</th>
-                    <th>สิทธิ์คงเหลือ</th>
+                    <th>สิทธิ์ที่ได้รับ (ชม.)</th>
+                    <th>สิทธิ์คงเหลือ (ชม.)</th>
                 </tr>
             </thead>
             <tbody id="leave-balance-table">
@@ -71,8 +71,8 @@
             <h4 class="text-center">ค้นหาและกรองคำขออนุมัติ</h4>
             <form id="filter-form">
                 <div class="mb-3">
-                    <label for="filter-start-date" class="form-label">เริ่มวันที่</label>
-                    <input type="date" id="filter-start-date" class="form-control">
+                    <label for="filter-start-date" class="form-label">วันที่เวลา</label>
+                    <input type="datetime-local" id="filter-start-date" class="form-control" step="1800">
                 </div>
                 <div class="mb-3">
                     <label for="filter-leave-type" class="form-label">ประเภทการลา</label>
@@ -147,8 +147,8 @@
                         const row = document.createElement("tr");
                         row.innerHTML = `
                             <td>${balance.leave_type}</td>
-                            <td>${balance.total_days}</td>
-                            <td>${balance.remaining_days}</td>
+                            <td>${balance.total_hours}</td>
+                            <td>${balance.remaining_hours}</td>
                         `;
                         leaveBalanceTable.appendChild(row);
                     });
@@ -178,7 +178,7 @@
                 const leaveType = document.getElementById("filter-leave-type").value;
 
                 let url = "/attendance/get-leave-attendances/?";
-                if (startDate) url += `start_date=${startDate}&`;
+                if (startDate) url += `start_datetime=${startDate}&`;
                 if (leaveType) url += `leave_type=${leaveType}`;
 
                 fetch(url)
@@ -193,7 +193,7 @@
                                     <div class="card-body">
                                         <h4 class="card-title my-2">รหัสคำขออนุมัติ: ${request.id}</h4>
                                         <p class="card-text">ประเภทการลา: ${request.leave_type}</p>
-                                        <p class="card-text">ช่วงเวลา: ${request.start_date} - ${request.end_date}</p>
+                                        <p class="card-text">ช่วงเวลา: ${request.start_datetime} - ${request.end_datetime}</p>
                                         <p class="card-text">เหตุผล: ${request.reason}</p>
                                         <p class="card-text">ผู้อนุมัติ: ${request.approve_user}</p>
                                         <p class="card-text">
