@@ -35,6 +35,18 @@ def register_line_id(request):
         data = json.loads(request.body)
         staff_code = data.get("staffCode")
 
+        get_staff_name = BsnStaff.objects.filter(staff_code=staff_code).first()
+        if not get_staff_name:
+            return JsonResponse({"error": "Staff not found"}, status=404)
+        user = User.objects.get(username=request.user)
+        if not user:
+            return JsonResponse({"error": "User not found"}, status=404)
+        else:
+            user.first_name = get_staff_name.staff_fname
+            user.last_name = get_staff_name.staff_lname
+            user.username = get_staff_name.staff_code
+            user.save()
+
         staff = BsnStaff.objects.get(staff_code=staff_code)
         if not staff:
             return JsonResponse({"error": "Staff not found"}, status=404)

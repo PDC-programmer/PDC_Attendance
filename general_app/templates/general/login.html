@@ -5,12 +5,13 @@
 {% block content %}
 <br>
 
-
-<div class="container text-center">
+<div class="d-flex justify-content-center align-items-center vh-100">
+<div class="container text-center " style="width: 95%;">
   <h4>โปรแกรมจัดการเวลางาน</h4>
+
 
   <a href="{% provider_login_url 'line' method='oauth2' %}" class="btn btn-success">เข้าสู่ระบบ <img src="https://www.vectorlogo.zone/logos/line/line-official.svg" width="24" height="24"></a>
 
 </div>
-
+</div>
 {% endblock %}

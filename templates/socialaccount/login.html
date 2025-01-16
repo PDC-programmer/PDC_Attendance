@@ -6,7 +6,8 @@
 {% endblock head_title %}
 
 {% block content %}
-<div class="container">
+<div class="d-flex justify-content-center align-items-center vh-100">
+<div class="container text-center " style="width: 95%;">
     {% if process == "connect" %}
         {% element h1 %}
             {% blocktrans with provider.name as provider %}เชื่อมต่อกับ {{ provider }}{% endblocktrans %}
@@ -16,7 +17,7 @@
         {% endelement %}
     {% else %}
         {% element h1 %}
-            {% blocktrans with provider.name as provider %}เข้าสู่ระบบด้วย {{ provider }}{% endblocktrans %}
+            {% blocktrans with provider.name as provider %}เข้าสู่ระบบ<!--ด้วย {{ provider }}-->{% endblocktrans %}
         {% endelement %}
         {% element p %}
             {% blocktrans with provider.name as provider %}เข้าสู่ระบบด้วย {{ provider }}.{% endblocktrans %}
@@ -25,10 +26,13 @@
     {% element form method="post" no_visible_fields=True %}
         {% slot actions %}
             {% csrf_token %}
-            {% element button type="submit" %}
-                {% trans "Continue" %}
-            {% endelement %}
+            <div class="d-flex justify-content-center">
+                <button type="submit" class="btn btn-success w-50">
+                    ยืนยัน <img src="https://www.vectorlogo.zone/logos/line/line-official.svg" width="24" height="24">
+                </button>
+            </div>
         {% endslot %}
     {% endelement %}
+</div>
 </div>
 {% endblock content %}
