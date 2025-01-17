@@ -23,6 +23,8 @@ LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
 LINE_LOG_IN_CHANNEL_SECRET = os.getenv('LINE_LOG_IN_CHANNEL_SECRET')
 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
