@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from django.contrib.auth.models import User
-from attendance_app.models import LeaveAttendance
+from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveBalanceInitial
 from line_app.models import UserProfile
 from user_app.models import User, BsnStaff
 from linebot.models import (
@@ -32,28 +32,55 @@ STATUS_DISPLAY = {
 @csrf_exempt
 def register_line_id(request):
     if request.method == "POST":
-        data = json.loads(request.body)
-        staff_code = data.get("staffCode")
+        try:
+            data = json.loads(request.body)
+            staff_code = data.get("staffCode")
 
-        get_staff_name = BsnStaff.objects.filter(staff_code=staff_code).first()
-        if not get_staff_name:
-            return JsonResponse({"error": "Staff not found"}, status=404)
-        user = User.objects.get(username=request.user)
-        if not user:
-            return JsonResponse({"error": "User not found"}, status=404)
-        else:
+            # ค้นหา BsnStaff จาก staff_code
+            get_staff_name = BsnStaff.objects.filter(staff_code=staff_code).first()
+            if not get_staff_name:
+                return JsonResponse({"error": "Staff not found"}, status=404)
+
+            # ตรวจสอบว่าผู้ใช้งานเคยลงทะเบียนแล้วหรือยัง
+            if get_staff_name.django_usr_id:
+                if get_staff_name.django_usr_id == request.user:
+                    return JsonResponse({"error": "You are already registered."}, status=400)
+                else:
+                    return JsonResponse({"error": "This staff code is already registered by another user."},
+                                        status=400)
+
+            # อัปเดตข้อมูล User
+            user = request.user
             user.first_name = get_staff_name.staff_fname
             user.last_name = get_staff_name.staff_lname
             user.username = get_staff_name.staff_code
             user.save()
 
-        staff = BsnStaff.objects.get(staff_code=staff_code)
-        if not staff:
-            return JsonResponse({"error": "Staff not found"}, status=404)
-        else:
-            staff.django_usr_id = request.user
+            # ค้นหา LeaveBalanceInitial ตาม staff_code
+            leave_balances_initial = LeaveBalanceInitial.objects.filter(staff_code=staff_code)
+            if not leave_balances_initial.exists():
+                return JsonResponse({"error": "No leave balance found for staff"}, status=404)
+
+            # บันทึกข้อมูลใน LeaveBalance
+            for initial_balance in leave_balances_initial:
+                LeaveBalance.objects.update_or_create(
+                    user=user,
+                    leave_type=initial_balance.leave_type,
+                    defaults={
+                        "total_hours": initial_balance.total_hours,
+                        "remaining_hours": initial_balance.remaining_hours,
+                    }
+                )
+
+            # อัปเดต django_usr_id ของ BsnStaff
+            staff = BsnStaff.objects.get(staff_code=staff_code)
+            staff.django_usr_id = user
             staff.save()
+
             return JsonResponse({"success": True, "message": "Registration successful."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": f"An error occurred: {str(e)}"}, status=500)
 
     return render(request, 'line_app/register_line_id.html')
 
