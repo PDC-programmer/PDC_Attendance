@@ -43,3 +43,10 @@ class LeaveBalance(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.leave_type.th_name}: {self.remaining_hours} hours remaining"
+
+
+class LeaveBalanceInitial(models.Model):
+    staff_code = models.CharField(max_length=128, blank=True, null=True)
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE, related_name="leave_balances_initial")
+    total_hours = models.FloatField(default=0)  # Change to hours
+    remaining_hours = models.FloatField(default=0)  # Change to hours
