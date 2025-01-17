@@ -110,42 +110,42 @@
             const searchButton = document.getElementById("search-button");
             const resetButton = document.getElementById("reset-button");
             const filterForm = document.getElementById("filter-form");
-<!--            const startDatetimeInput = document.getElementById("start-datetime");-->
-<!--            const endDatetimeInput = document.getElementById("end-datetime");-->
+            const startDatetimeInput = document.getElementById("start-datetime");
+            const endDatetimeInput = document.getElementById("end-datetime");
 
-            flatpickr("#start-datetime", {
-                enableTime: true,
-                dateFormat: "d/m/Y H:i",
-                time_24hr: true,
-                minuteIncrement: 30,
-            });
+<!--            flatpickr("#start-datetime", {-->
+<!--                enableTime: true,-->
+<!--                dateFormat: "d/m/Y H:i",-->
+<!--                time_24hr: true,-->
+<!--                minuteIncrement: 30,-->
+<!--            });-->
 
-            flatpickr("#end-datetime", {
-                enableTime: true,
-                dateFormat: "d/m/Y H:i",
-                time_24hr: true,
-                minuteIncrement: 30,
-            });
+<!--            flatpickr("#end-datetime", {-->
+<!--                enableTime: true,-->
+<!--                dateFormat: "d/m/Y H:i",-->
+<!--                time_24hr: true,-->
+<!--                minuteIncrement: 30,-->
+<!--            });-->
 
-            flatpickr("#filter-start-date", {
-                enableTime: true,
-                dateFormat: "d/m/Y H:i",
-                time_24hr: true,
-                minuteIncrement: 30,
-            });
+<!--            flatpickr("#filter-start-date", {-->
+<!--                enableTime: true,-->
+<!--                dateFormat: "d/m/Y H:i",-->
+<!--                time_24hr: true,-->
+<!--                minuteIncrement: 30,-->
+<!--            });-->
 
-<!--            function validateInterval(input) {-->
-<!--                const datetime = new Date(input.value);-->
-<!--                const minutes = datetime.getMinutes();-->
-<!--                if (minutes !== 0 && minutes !== 30) {-->
-<!--                    Swal.fire(-->
-<!--                        "Invalid Time",-->
-<!--                        "โปรดเลือกเวลาที่ลงท้ายด้วย 00 หรือ 30 นาทีเท่านั้น",-->
-<!--                        "error"-->
-<!--                    );-->
-<!--                    input.value = ""; // Clear invalid value-->
-<!--                }-->
-<!--            }-->
+            function validateInterval(input) {
+                const datetime = new Date(input.value);
+                const minutes = datetime.getMinutes();
+                if (minutes !== 0 && minutes !== 30) {
+                    Swal.fire(
+                        "Invalid Time",
+                        "โปรดเลือกเวลาที่ลงท้ายด้วย 00 หรือ 30 นาทีเท่านั้น",
+                        "error"
+                    );
+                    input.value = ""; // Clear invalid value
+                }
+            }
 
             // Load employee information
             fetch("/attendance/get-staff/")
@@ -231,7 +231,7 @@
                 });
 
                 let url = "/attendance/get-leave-attendances/?";
-                if (startDate) url += `start_datetime=${convertToISOFormat(startDate)}&`;
+                if (startDate) url += `start_datetime=${startDate}&`;
                 if (leaveType) url += `leave_type=${leaveType}`;
 
                 fetch(url)
@@ -294,12 +294,12 @@
 
                 const formData = new FormData(leaveForm);
 
-                // แปลงรูปแบบวันที่ให้เป็น '%Y-%m-%dT%H:%M'
-                const startDatetime = formData.get("start_datetime");
-                const endDatetime = formData.get("end_datetime");
+<!--                // แปลงรูปแบบวันที่ให้เป็น '%Y-%m-%dT%H:%M'-->
+<!--                const startDatetime = formData.get("start_datetime");-->
+<!--                const endDatetime = formData.get("end_datetime");-->
 
-                formData.set("start_datetime", convertToISOFormat(startDatetime));
-                formData.set("end_datetime", convertToISOFormat(endDatetime));
+<!--                formData.set("start_datetime", convertToISOFormat(startDatetime));-->
+<!--                formData.set("end_datetime", convertToISOFormat(endDatetime));-->
 
                 // Show loading alert
                 Swal.fire({
@@ -343,8 +343,8 @@
 
                 return formattedDate;
             }
-<!--            startDatetimeInput.addEventListener("blur", () => validateInterval(startDatetimeInput));-->
-<!--            endDatetimeInput.addEventListener("blur", () => validateInterval(endDatetimeInput));-->
+            startDatetimeInput.addEventListener("blur", () => validateInterval(startDatetimeInput));
+            endDatetimeInput.addEventListener("blur", () => validateInterval(endDatetimeInput));
         });
     </script>
 {% endblock %}
