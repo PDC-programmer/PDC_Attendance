@@ -58,6 +58,7 @@ def get_leave_attendances(request):
 
     # รับค่า start_date, end_date และ leave_type จาก query parameters
 
+    # start_datetime = datetime.strptime(data.get("start_datetime"), "%Y-%m-%dT%H:%M")
     start_datetime = request.GET.get("start_datetime")
     leave_type_id = request.GET.get("leave_type")
 
@@ -302,7 +303,7 @@ def leave_request_view_auth(request):
                             # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
                             # Add image URL here
                             title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
-                            text=f"ประเภท: {leave_type.th_name}\nวัน: {datetime.date(start_datetime)} - {datetime.date(end_datetime)}\nคงเหลือ: {leave_balance.remaining_hours}",
+                            text=f"{datetime.date(start_datetime).strftime("%d/%m/%y")} - {datetime.date(end_datetime).strftime("%d/%m/%y")}\n{leave_type.th_name}\nเหลือ: {leave_balance.remaining_hours//8} วัน",
                             actions=[
                                 PostbackAction(
                                     label="อนุมัติ",
@@ -337,7 +338,7 @@ def leave_request_view_auth(request):
                                 # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
                                 # Add image URL here
                                 title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
-                                text=f"ประเภท: {leave_type.th_name}\nวัน: {datetime.date(start_datetime)} - {datetime.date(end_datetime)}\nลา: {working_hours} ชม.",
+                                text=f"{datetime.date(start_datetime).strftime("%d/%m/%y")} - {datetime.date(end_datetime).strftime("%d/%m/%y")}\n{leave_type.th_name}\nเหลือ: {leave_balance.remaining_hours//8} วัน",
                                 actions=[
                                     PostbackAction(
                                         label="ยกเลิก",

@@ -7,6 +7,8 @@
     <title>{% block title %}Plus Dental Clinic Attendance{% endblock %}</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- SweetAlert2 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <style>
         body {
             background-color: #f2f2f2;
@@ -53,6 +55,36 @@
         }
         .form-label {
             font-weight: bold;
+        }
+        .btn-sm {
+            font-size: 0.75rem; /* Smaller text for buttons */
+            padding: 4px 8px;   /* Adjust padding for smaller size */
+        }
+        .table th, .table td {
+        font-size: 0.85rem; /* Adjust font size */
+        }
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .table th:first-child {
+            border-top-left-radius: 10px;
+        }
+
+        .table th:last-child {
+            border-top-right-radius: 10px;
+        }
+
+        .table td:first-child:last-child {
+            border-bottom-left-radius: 10px;
+        }
+
+        .table td:last-child:last-child {
+            border-bottom-right-radius: 10px;
         }
     </style>
 </head>

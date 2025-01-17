@@ -23,7 +23,7 @@
                 <p><strong>ชื่อผู้ขอ:</strong> {{ staff.staff_fname }} {{ staff.staff_lname }}</p>
                 <p><strong>ชื่อผู้อนุมัติ:</strong> {{ approver.staff_fname }} {{ approver.staff_lname }}</p>
                 <p><strong>ประเภทวันลา:</strong> {{ leave_request.leave_type.th_name }}</p>
-                <p><strong>วันที่:</strong> {{ leave_request.start_datetime }} ถึง {{ leave_request.end_datetime }}</p>
+                <p><strong>วันที่:</strong> {{ leave_request.start_datetime|date:"d/m/Y H:i" }} - {{ leave_request.end_datetime|date:"d/m/Y H:i" }}</p>
                 <p><strong>เหตุผล:</strong> {{ leave_request.reason }}</p>
                 <p>
                     <strong>สถานะ:</strong>
@@ -39,14 +39,14 @@
                 <!-- Approver Actions -->
                 {% if request.user == leave_request.approve_user and leave_request.status == 'pending' %}
                 <div class="d-flex gap-2 justify-content-center mt-3">
-                    <button id="approve-btn" class="btn btn-success">อนุมัติ</button>
-                    <button id="reject-btn" class="btn btn-danger">ปฏิเสธ</button>
+                    <button id="approve-btn" class="btn btn-success btn-sm">อนุมัติ</button>
+                    <button id="reject-btn" class="btn btn-danger btn-sm">ปฏิเสธ</button>
                 </div>
                 {% endif %}
 
                 <!-- Requester Actions -->
                 {% if request.user == leave_request.user and leave_request.status == 'pending' %}
-                <button id="cancel-btn" class="btn btn-warning w-100 mt-3">ยกเลิกคำขอ</button>
+                <button id="cancel-btn" class="btn btn-warning btn-sm mt-3">ยกเลิกคำขอ</button>
                 {% endif %}
             </div>
         </div>
