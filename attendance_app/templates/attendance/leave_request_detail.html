@@ -23,7 +23,8 @@
                 <p><strong>ชื่อผู้ขอ:</strong> {{ staff.staff_fname }} {{ staff.staff_lname }}</p>
                 <p><strong>ชื่อผู้อนุมัติ:</strong> {{ approver.staff_fname }} {{ approver.staff_lname }}</p>
                 <p><strong>ประเภทวันลา:</strong> {{ leave_request.leave_type.th_name }}</p>
-                <p><strong>วันที่:</strong> {{ leave_request.start_datetime|date:"d/m/Y H:i" }} - {{ leave_request.end_datetime|date:"d/m/Y H:i" }}</p>
+                <p><strong>วันที่:</strong> {{ leave_request.start_datetime|date:"d/m/Y h:i" }} - {{ leave_request.end_datetime|date:"d/m/Y h:i" }}</p>
+                <p><strong>ขอลา:</strong> {{ leave_hours }} ชม.</p>
                 <p><strong>เหตุผล:</strong> {{ leave_request.reason }}</p>
                 <p>
                     <strong>สถานะ:</strong>
@@ -45,7 +46,7 @@
                 {% endif %}
 
                 <!-- Requester Actions -->
-                {% if request.user == leave_request.user and leave_request.status == 'pending' %}
+                {% if request.user == leave_request.user and leave_request.status == 'pending' or leave_request.status == 'approved' %}
                 <button id="cancel-btn" class="btn btn-warning btn-sm mt-3">ยกเลิกคำขอ</button>
                 {% endif %}
             </div>

@@ -32,7 +32,7 @@ def get_leave_balances(request):
     # ดึงข้อมูลประเภทการลา
     leave_balances = LeaveBalance.objects.filter(user=request.user)
     data = [{"leave_type": leave.leave_type.th_name,
-             "total_hours": leave.total_hours,
+             "used_hours": leave.total_hours - leave.remaining_hours,
              "remaining_hours": leave.remaining_hours
              } for leave in leave_balances]
     return JsonResponse(data, safe=False)
@@ -364,7 +364,11 @@ def leave_request_view_auth(request):
 
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
 
-    return render(request, "attendance/leave_request_auth.html")
+    context = {
+        "hours_range": range(7, 22),  # ช่วงชั่วโมงตั้งแต่ 7 ถึง 21
+    }
+
+    return render(request, "attendance/leave_request_auth.html", context)
 
 
 @login_required(login_url='log-in')
@@ -372,6 +376,8 @@ def leave_request_detail(request, leave_id):
     # Fetch LeaveAttendance object
     leave_request = get_object_or_404(LeaveAttendance, id=leave_id)
 
+    # Calculate working hours only
+    leave_hours = calculate_working_hours(leave_request.start_datetime, leave_request.end_datetime)
     staff = BsnStaff.objects.filter(django_usr_id=leave_request.user.id).first()
     approver = BsnStaff.objects.filter(django_usr_id=leave_request.approve_user.id).first()
 
@@ -421,4 +427,4 @@ def leave_request_detail(request, leave_id):
         return HttpResponseForbidden("คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ !")
 
     return render(request, "attendance/leave_request_detail.html",
-                  {"leave_request": leave_request, "staff": staff, "approver": approver})
+                  {"leave_request": leave_request, "staff": staff, "approver": approver, "leave_hours":leave_hours})
