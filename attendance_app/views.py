@@ -431,20 +431,31 @@ def leave_request_detail(request, leave_id):
 
 
 @login_required(login_url='log-in')
-def leave_requests_view(request):
+def leave_requests_approval(request):
     # Determine if the user is an approver or requester
-    if BsnStaff.objects.filter(django_usr_id=request.user, mng_staff_id__isnull=False).exists():
+    if BsnStaff.objects.filter(django_usr_id=request.user, staff_type="manager").exists():
         # Approver: Fetch requests assigned to this user
         leave_requests = LeaveAttendance.objects.filter(approve_user=request.user).order_by('-start_datetime')
         role = "approver"
     else:
-        # Requester: Fetch requests made by this user
+        return JsonResponse({"error": "คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ได้"}, status=400)
+
+    return render(request, "attendance/leave_requests_approval.html", {
+        "leave_requests": leave_requests,
+        "role": role,
+    })
+
+
+@login_required(login_url='log-in')
+def leave_requests_list(request):
+    # Determine if the user is an approver or requester
+    if BsnStaff.objects.filter(django_usr_id=request.user).exists():
         leave_requests = LeaveAttendance.objects.filter(user=request.user).order_by('-start_datetime')
-        role = "requester"
+    else:
+        return JsonResponse({"error": "คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ได้"}, status=400)
 
     return render(request, "attendance/leave_requests_list.html", {
         "leave_requests": leave_requests,
-        "role": role,
     })
 
 

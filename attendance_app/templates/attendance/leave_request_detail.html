@@ -23,7 +23,7 @@
                 <p><strong>ชื่อผู้ขอ:</strong> {{ staff.staff_fname }} {{ staff.staff_lname }}</p>
                 <p><strong>ชื่อผู้อนุมัติ:</strong> {{ approver.staff_fname }} {{ approver.staff_lname }}</p>
                 <p><strong>ประเภทวันลา:</strong> {{ leave_request.leave_type.th_name }}</p>
-                <p><strong>วันที่:</strong> {{ leave_request.start_datetime|date:"d/m/Y h:i" }} - {{ leave_request.end_datetime|date:"d/m/Y h:i" }}</p>
+                <p><strong>วันที่:</strong> {{ leave_request.start_datetime|date:"d/m/Y H:i" }} - {{ leave_request.end_datetime|date:"d/m/Y H:i" }}</p>
                 <p><strong>ขอลา:</strong> {{ leave_hours }} ชม.</p>
                 <p><strong>เหตุผล:</strong> {{ leave_request.reason }}</p>
                 <p>
