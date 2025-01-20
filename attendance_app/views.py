@@ -428,3 +428,50 @@ def leave_request_detail(request, leave_id):
 
     return render(request, "attendance/leave_request_detail.html",
                   {"leave_request": leave_request, "staff": staff, "approver": approver, "leave_hours":leave_hours})
+
+
+@login_required(login_url='log-in')
+def leave_requests_view(request):
+    # Determine if the user is an approver or requester
+    if BsnStaff.objects.filter(django_usr_id=request.user, mng_staff_id__isnull=False).exists():
+        # Approver: Fetch requests assigned to this user
+        leave_requests = LeaveAttendance.objects.filter(approve_user=request.user).order_by('-start_datetime')
+        role = "approver"
+    else:
+        # Requester: Fetch requests made by this user
+        leave_requests = LeaveAttendance.objects.filter(user=request.user).order_by('-start_datetime')
+        role = "requester"
+
+    return render(request, "attendance/leave_requests_list.html", {
+        "leave_requests": leave_requests,
+        "role": role,
+    })
+
+
+@csrf_exempt
+@login_required(login_url='log-in')
+def batch_action(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        action = data.get("action")
+        leave_ids = data.get("leave_ids", [])
+
+        if not leave_ids:
+            return JsonResponse({"error": "No leave requests selected"}, status=400)
+
+        leaves = LeaveAttendance.objects.filter(id__in=leave_ids)
+        if not leaves.exists():
+            return JsonResponse({"error": "Invalid leave requests"}, status=404)
+
+        if action == "approve":
+            leaves.update(status="approved")
+            message = "Selected leave requests approved"
+        elif action == "reject":
+            leaves.update(status="rejected")
+            message = "Selected leave requests rejected"
+        else:
+            return JsonResponse({"error": "Invalid action"}, status=400)
+
+        return JsonResponse({"message": message}, status=200)
+
+    return JsonResponse({"error": "Invalid method"}, status=405)
