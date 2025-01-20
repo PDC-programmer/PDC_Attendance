@@ -104,14 +104,18 @@
                         <a class="nav-link" href="/">หน้าแรก</a>
                     </li>
                     {% if user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="/attendance/leave-request-auth/">ลางาน</a>
-                        </li>
+
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 {{ user.username }}: {{ user.first_name }} {{ user.last_name }}
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="/attendance/leave-request-auth/">ลางาน</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/attendance/leave-requests-list/">รายการคำขอ</a>
+                                </li>
 
                                 <li><a class="dropdown-item" href="/accounts/logout/">ออกจากระบบ</a></li>
                             </ul>
