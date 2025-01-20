@@ -33,7 +33,7 @@ def update_leave_balance(sender, instance, **kwargs):
     # ค้นหา LeaveBalance ที่เกี่ยวข้อง
     leave_balance = LeaveBalance.objects.filter(user=instance.user, leave_type=instance.leave_type).first()
 
-    if instance.status == 'approved':
+    if instance.status == 'approved' and instance.previous_status == 'pending':
         if leave_balance:
             if leave_balance.remaining_hours >= working_hours:
                 # หักจำนวนวันเมื่อสถานะเปลี่ยนเป็น approved

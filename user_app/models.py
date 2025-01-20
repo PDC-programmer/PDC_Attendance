@@ -10,7 +10,7 @@ def user_image_path(instance, filename):
 class User(AbstractUser):
     id = models.AutoField(primary_key=True)
     image = models.ImageField(upload_to=user_image_path, null=True, blank=True)
-    uid = models.CharField(max_length=500, null=True, blank=True)
+    role = models.CharField(max_length=100, null=True, blank=True)
 
 
 class BsnStaff(models.Model):

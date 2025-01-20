@@ -35,7 +35,11 @@
             {% for request in leave_requests %}
             <tr>
                 {% if role == "approver" %}
-                <td><input type="checkbox" class="select-leave" value="{{ request.id }}"></td>
+                 <td>
+                    <input type="checkbox" class="select-leave"
+                           value="{{ request.id }}"
+                           {% if request.status != 'pending' %}disabled{% endif %}>
+                </td>
                 {% endif %}
                 <td>{{ request.leave_type.th_name }}</td>
                 <td>{{ request.start_datetime|date:"d/m/Y H:i" }} - {{ request.end_datetime|date:"d/m/Y H:i" }}</td>
