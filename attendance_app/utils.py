@@ -5,8 +5,8 @@ from django.conf import settings
 def calculate_working_hours(start_datetime, end_datetime):
     # Define working hours
     morning_start = time(9, 0)  # 9:00 AM
-    morning_end = time(12, 0)  # 12:00 PM
-    afternoon_start = time(13, 0)  # 1:00 PM
+    morning_end = time(13, 0)  # 1:00 PM
+    afternoon_start = time(14, 0)  # 2:00 PM
     afternoon_end = time(18, 0)  # 6:00 PM
 
     total_hours = 0

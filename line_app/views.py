@@ -39,14 +39,14 @@ def register_line_id(request):
             # ค้นหา BsnStaff จาก staff_code
             get_staff_name = BsnStaff.objects.filter(staff_code=staff_code).first()
             if not get_staff_name:
-                return JsonResponse({"error": "Staff not found"}, status=404)
+                return JsonResponse({"error": "ไม่พบข้อมูลพนักงาน !"}, status=404)
 
             # ตรวจสอบว่าผู้ใช้งานเคยลงทะเบียนแล้วหรือยัง
             if get_staff_name.django_usr_id:
                 if get_staff_name.django_usr_id == request.user:
-                    return JsonResponse({"error": "You are already registered."}, status=400)
+                    return JsonResponse({"error": "บัญชีของคุณได้ทำการลงทะเบียนไปแล้ว."}, status=400)
                 else:
-                    return JsonResponse({"error": "This staff code is already registered by another user."},
+                    return JsonResponse({"error": "รหัสพนักงานถูกใช้ลงทะเบียนไปแล้ว !"},
                                         status=400)
 
             # อัปเดตข้อมูล User
@@ -54,6 +54,7 @@ def register_line_id(request):
             user.first_name = get_staff_name.staff_fname
             user.last_name = get_staff_name.staff_lname
             user.username = get_staff_name.staff_code
+            user.role = get_staff_name.staff_type
             user.save()
 
             # ค้นหา LeaveBalanceInitial ตาม staff_code

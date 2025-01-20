@@ -11,6 +11,7 @@ from datetime import datetime
 from django.contrib.auth.decorators import login_required
 from allauth.socialaccount.models import SocialAccount
 from attendance_app.utils import calculate_working_hours  # Import the utility function
+from django.utils.timezone import now
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -365,7 +366,7 @@ def leave_request_view_auth(request):
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
 
     context = {
-        "hours_range": range(7, 22),  # ช่วงชั่วโมงตั้งแต่ 7 ถึง 21
+        "hours_range": range(8, 22),  # ช่วงชั่วโมงตั้งแต่ 8 ถึง 21
     }
 
     return render(request, "attendance/leave_request_auth.html", context)
@@ -417,6 +418,9 @@ def leave_request_detail(request, leave_id):
                 return JsonResponse({"error": "ปฏิเสธคำขออนุมัติแล้ว"}, status=400)
 
         elif action == "cancel" and request.user == leave_request.user:
+            if leave_request.start_datetime < now():
+                return JsonResponse({"error": "ไม่สามารถยกเลิกคำขออนุมัติที่ผ่านมาแล้วได้ !"}, status=400)
+
             if leave_request.status in ["pending", "approved"]:
                 leave_request.status = "cancelled"
                 leave_request.save()
@@ -463,26 +467,34 @@ def leave_requests_list(request):
 @login_required(login_url='log-in')
 def batch_action(request):
     if request.method == "POST":
-        data = json.loads(request.body)
-        action = data.get("action")
-        leave_ids = data.get("leave_ids", [])
+        try:
+            data = json.loads(request.body)
+            action = data.get("action")
+            leave_ids = data.get("leave_ids", [])
 
-        if not leave_ids:
-            return JsonResponse({"error": "No leave requests selected"}, status=400)
+            if not leave_ids:
+                return JsonResponse({"error": "โปรดเลือกคำขออนุมัติที่ต้องการพิจารณา !"}, status=400)
 
-        leaves = LeaveAttendance.objects.filter(id__in=leave_ids)
-        if not leaves.exists():
-            return JsonResponse({"error": "Invalid leave requests"}, status=404)
+            leaves = LeaveAttendance.objects.filter(id__in=leave_ids, status='pending')
+            if not leaves.exists():
+                return JsonResponse({"error": "คำขออนุมัตินี้ถูกพิจารณาไปแล้ว !"}, status=404)
 
-        if action == "approve":
-            leaves.update(status="approved")
-            message = "Selected leave requests approved"
-        elif action == "reject":
-            leaves.update(status="rejected")
-            message = "Selected leave requests rejected"
-        else:
-            return JsonResponse({"error": "Invalid action"}, status=400)
+            if action not in ["approve", "reject"]:
+                return JsonResponse({"error": "การพิจารณาไม่ถูกต้อง"}, status=400)
 
-        return JsonResponse({"message": message}, status=200)
+            # Iterate and save each leave request
+            for leave in leaves:
+                leave.status = "approved" if action == "approve" else "rejected"
+                leave.save()
 
-    return JsonResponse({"error": "Invalid method"}, status=405)
+            message = (
+                "คำขออนุมัติที่เลือกได้รับการอนุมัติแล้ว !"
+                if action == "approve"
+                else "คำขออนุมัติที่เลือกได้รับการปฏิเสธแล้ว !"
+            )
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": f"พบข้อผิดพลาด: {str(e)}"}, status=500)
+
+    return JsonResponse({"error": "การทำงานผิดพลาด"}, status=405)

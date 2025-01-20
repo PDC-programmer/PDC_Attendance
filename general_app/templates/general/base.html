@@ -33,7 +33,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         h1, h4 {
-            font-size: 1rem;
+            font-size: 1.5rem;
             margin-top: 20px;
             margin-bottom: 20px;
             color: #2342de;
@@ -116,9 +116,11 @@
                                 <li>
                                     <a class="dropdown-item" href="/attendance/leave-requests-list/">รายการคำขอ</a>
                                 </li>
+                                {% if user.role == "Manager" %}
                                 <li>
                                     <a class="dropdown-item" href="/attendance/leave-requests-approval/">การพิจารณา</a>
                                 </li>
+                                {% endif %}
 
                                 <li><a class="dropdown-item" href="/accounts/logout/">ออกจากระบบ</a></li>
                             </ul>
