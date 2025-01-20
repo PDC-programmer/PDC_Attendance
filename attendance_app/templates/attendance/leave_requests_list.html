@@ -1,0 +1,107 @@
+{% extends "general/base.html" %}
+
+{% block title %}รายการคำขออนุมัติ{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center vh-100">
+<div class="container " style="width: 95%;">
+    <h1 class="text-center my-4">รายการคำขออนุมัติ</h1>
+
+    {% if role == "approver" %}
+    <div class="mb-3 text-end">
+        <button id="approve-selected" class="btn btn-success btn-sm">อนุมัติที่เลือก</button>
+        <button id="reject-selected" class="btn btn-danger btn-sm">ปฏิเสธที่เลือก</button>
+    </div>
+    {% endif %}
+
+    <table class="table table-bordered table-hover">
+        <thead class="table-light">
+            <tr>
+                {% if role == "approver" %}
+                <th scope="col"><input type="checkbox" id="select-all"></th>
+                {% endif %}
+                <th scope="col">ประเภทการลา</th>
+                <th scope="col">ช่วงเวลา</th>
+                <th scope="col">เหตุผล</th>
+                <th scope="col">สถานะ</th>
+                {% if role == "approver" %}
+                <th scope="col">ผู้ขอ</th>
+                {% endif %}
+                <th scope="col">เพิ่มเติม</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for request in leave_requests %}
+            <tr>
+                {% if role == "approver" %}
+                <td><input type="checkbox" class="select-leave" value="{{ request.id }}"></td>
+                {% endif %}
+                <td>{{ request.leave_type.th_name }}</td>
+                <td>{{ request.start_datetime|date:"d/m/Y H:i" }} - {{ request.end_datetime|date:"d/m/Y H:i" }}</td>
+                <td>{{ request.reason }}</td>
+                <td>
+                    <span class="badge {% if request.status == 'approved' %}bg-success
+                                    {% elif request.status == 'rejected' %}bg-danger
+                                    {% elif request.status == 'pending' %}bg-warning text-dark
+                                    {% else %}bg-secondary{% endif %}">
+                        {{ request.get_status_display }}
+                    </span>
+                </td>
+                {% if role == "approver" %}
+                <td>{{ request.user.get_full_name }}</td>
+                {% endif %}
+                <td>
+                    <a href="/attendance/leave-request-detail/{{ request.id }}/" class="btn btn-sm btn-primary">รายละเอียด</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const selectAll = document.getElementById("select-all");
+    const checkboxes = document.querySelectorAll(".select-leave");
+
+    if (selectAll) {
+        selectAll.addEventListener("change", () => {
+            checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
+        });
+    }
+
+    function batchAction(action) {
+        const selectedIds = Array.from(checkboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+
+        if (selectedIds.length === 0) {
+            Swal.fire("Error", "กรุณาเลือกคำขอก่อน", "error");
+            return;
+        }
+
+        fetch("/attendance/batch-action/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify({ action, leave_ids: selectedIds }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                Swal.fire("Error", data.error, "error");
+            } else {
+                Swal.fire("Success", data.message, "success").then(() => location.reload());
+            }
+        })
+        .catch(err => Swal.fire("Error", "An error occurred. Please try again.", "error"));
+    }
+
+    document.getElementById("approve-selected").addEventListener("click", () => batchAction("approve"));
+    document.getElementById("reject-selected").addEventListener("click", () => batchAction("reject"));
+});
+</script>
+{% endblock %}
