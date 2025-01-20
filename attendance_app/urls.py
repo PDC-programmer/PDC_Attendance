@@ -11,6 +11,7 @@ urlpatterns = [
     path("leave-request-detail/<int:leave_id>/", views.leave_request_detail, name="leave_request_detail"),
 
     # New routes for leave requests overview and batch actions
-    path('leave-requests-list/', views.leave_requests_view, name='leave_requests_list'),
+    path('leave-requests-list/', views.leave_requests_list, name='leave_requests_list'),
+    path('leave-requests-approval/', views.leave_requests_approval, name='leave_requests_approval'),
     path('batch-action/', views.batch_action, name='batch_action'),
 ]
