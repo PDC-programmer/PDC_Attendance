@@ -3,8 +3,8 @@
 {% block title %}รายละเอียดคำขออนุมัติ{% endblock %}
 
 {% block content %}
-
-    <div class="container">
+<div class="d-flex justify-content-center align-items-center vh-100">
+<div class="container " style="width: 95%;">
         <h1 class="text-center">รายละเอียดคำขอการลา</h1>
 
         <!-- Leave Request Details -->
@@ -20,11 +20,12 @@
                     {% endif %}
                 </div>
 
-                <p><strong>ชื่อผู้ขอ:</strong> {{ staff.staff_fname }} {{ staff.staff_lname }}</p>
-                <p><strong>ชื่อผู้อนุมัติ:</strong> {{ approver.staff_fname }} {{ approver.staff_lname }}</p>
-                <p><strong>ประเภทวันลา:</strong> {{ leave_request.leave_type.th_name }}</p>
+                <p><strong>ผู้ขอ:</strong> {{ staff.staff_fname }} {{ staff.staff_lname }}</p>
+                <p><strong>สาขา:</strong> {{ staff.brc_id.brc_sname }}</p>
+                <p><strong>ผู้อนุมัติ:</strong> {{ approver.staff_fname }} {{ approver.staff_lname }}</p>
+                <p><strong>ประเภท:</strong> {{ leave_request.leave_type.th_name }}</p>
                 <p><strong>วันที่:</strong> {{ leave_request.start_datetime|date:"d/m/Y H:i" }} - {{ leave_request.end_datetime|date:"d/m/Y H:i" }}</p>
-                <p><strong>ขอลา:</strong> {{ leave_hours }} ชม.</p>
+                <p><strong>ขอลา:</strong> {{ leave_hours }}</p>
                 <p><strong>เหตุผล:</strong> {{ leave_request.reason }}</p>
                 <p>
                     <strong>สถานะ:</strong>
