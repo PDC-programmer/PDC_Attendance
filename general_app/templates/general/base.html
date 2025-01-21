@@ -113,14 +113,14 @@
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="userDropdown">
                                 <li>
-                                    <a class="dropdown-item" href="/attendance/leave-request-auth/">ลางาน</a>
+                                    <a class="dropdown-item" href="/attendance/leave-request-auth/">ขอลางาน</a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="/attendance/leave-requests-list/">รายการคำขอ</a>
                                 </li>
                                 {% if user.role == "Manager" %}
                                 <li>
-                                    <a class="dropdown-item" href="/attendance/leave-requests-approval/">การพิจารณา</a>
+                                    <a class="dropdown-item" href="/attendance/leave-requests-approval/">รายการอนุมัติ</a>
                                 </li>
                                 {% endif %}
 
