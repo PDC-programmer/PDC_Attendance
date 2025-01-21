@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveBalanceInitial
 from line_app.models import UserProfile
 from user_app.models import User, BsnStaff
+from branch_app.models import BsnBranch
 from linebot.models import (
     MessageEvent, FollowEvent, PostbackEvent, TextMessage,
     PostbackAction, TemplateSendMessage, ButtonsTemplate, TextSendMessage
@@ -124,7 +125,7 @@ def get_staff_info(request, staff_code):
         "staff_lname": staff.staff_lname,
         "staff_title": staff.staff_title,
         "staff_department": staff.staff_department,
-        "staff_brc": staff.staff_brc,
+        "staff_brc": staff.brc_id.brc_sname,
         "date_of_start": date_of_start_formatted,
     }, status=200)
 
