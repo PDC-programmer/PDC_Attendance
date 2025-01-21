@@ -114,12 +114,18 @@ def get_staff_info(request, staff_code):
     staff = BsnStaff.objects.filter(staff_code=staff_code).first()
     if not staff:
         return JsonResponse({"error": "ไม่พบข้อมูลพนักงาน"}, status=404)
+
+    # Format date_of_start as dd/mm/yyyy
+    date_of_start_formatted = staff.date_of_start.strftime("%d/%m/%Y") if staff.date_of_start else None
+
     return JsonResponse({
         "staff_code": staff.staff_code,
         "staff_fname": staff.staff_fname,
         "staff_lname": staff.staff_lname,
         "staff_title": staff.staff_title,
         "staff_department": staff.staff_department,
+        "staff_brc": staff.staff_brc,
+        "date_of_start": date_of_start_formatted,
     }, status=200)
 
 

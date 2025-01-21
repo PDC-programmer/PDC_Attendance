@@ -187,7 +187,7 @@
                         Swal.fire("Error", data.error, "error");
                     } else {
                         document.getElementById("employee-name").textContent = `${data.staff_fname} ${data.staff_lname}`;
-                        document.getElementById("employee-title").textContent = data.staff_brc || "-";
+                        document.getElementById("employee-title").textContent = data.staff_title || "-";
                         document.getElementById("employee-department").textContent = data.staff_department || "-";
                         document.getElementById("employee-staff-code").textContent = data.staff_code || "-";
                         document.getElementById("employee-branch").textContent = data.staff_brc || "-";
@@ -255,15 +255,15 @@
                 const startDate = document.getElementById("filter-start-date").value;
                 const leaveType = document.getElementById("filter-leave-type").value;
 
-                // Show loading alert
-                Swal.fire({
-                    title: 'กำลังค้นหาข้อมูล...',
-                    text: 'กรุณารอสักครู่...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
+<!--                // Show loading alert-->
+<!--                Swal.fire({-->
+<!--                    title: 'กำลังค้นหาข้อมูล...',-->
+<!--                    text: 'กรุณารอสักครู่...',-->
+<!--                    allowOutsideClick: false,-->
+<!--                    didOpen: () => {-->
+<!--                        Swal.showLoading();-->
+<!--                    }-->
+<!--                });-->
 
                 let url = "/attendance/get-leave-attendances/?";
                 if (startDate) url += `start_datetime=${startDate}&`;
@@ -297,7 +297,7 @@
                         }
                     })
                     .catch(err => console.error("Error filtering leave history:", err));
-                Swal.close(); // Close loading alert
+<!--                Swal.close(); // Close loading alert-->
             });
 
             // Reset filters
