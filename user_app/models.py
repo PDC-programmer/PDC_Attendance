@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from branch_app.models import BsnBranch
 import os
 
 
@@ -26,7 +27,11 @@ class BsnStaff(models.Model):
     staff_title = models.CharField(max_length=255, blank=True, null=True)
     usr_name = models.CharField(max_length=255, blank=True, null=True)
     usr_passwd = models.CharField(max_length=128, blank=True, null=True)
-    brc_id = models.BigIntegerField(blank=True, null=True)
+    brc_id = models.ForeignKey(BsnBranch,
+                               on_delete=models.DO_NOTHING,
+                               related_name="fk_bsnbranch",
+                               blank=True,
+                               null=True)
     brc_chkin_status = models.CharField(max_length=254, blank=True, null=True)
     mng_staff_id = models.BigIntegerField(blank=True, null=True)
     date_of_start = models.DateField(blank=True, null=True)

@@ -7,11 +7,13 @@ import json
 from django.conf import settings
 from linebot import LineBotApi
 from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction, TextSendMessage, URIAction
-from datetime import datetime
 from django.contrib.auth.decorators import login_required
 from allauth.socialaccount.models import SocialAccount
 from attendance_app.utils import calculate_working_hours  # Import the utility function
 from django.utils.timezone import now
+from django.db.models import Q
+from datetime import datetime
+from django.utils.dateparse import parse_date
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -44,12 +46,18 @@ def get_staff(request):
     staff = BsnStaff.objects.filter(django_usr_id=request.user).first()
     if not staff:
         return JsonResponse({"error": "ไม่พบข้อมูลพนักงาน"}, status=404)
+
+    # Format date_of_start as dd/mm/yyyy
+    date_of_start_formatted = staff.date_of_start.strftime("%d/%m/%Y") if staff.date_of_start else None
+
     return JsonResponse({
         "staff_code": staff.staff_code,
         "staff_fname": staff.staff_fname,
         "staff_lname": staff.staff_lname,
+        "staff_brc": staff.brc_id.brc_sname,
         "staff_title": staff.staff_title,
         "staff_department": staff.staff_department,
+        "date_of_start": date_of_start_formatted,
     }, status=200)
 
 
@@ -304,7 +312,7 @@ def leave_request_view_auth(request):
                             # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
                             # Add image URL here
                             title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
-                            text=f"{datetime.date(start_datetime).strftime("%d/%m/%y")} - {datetime.date(end_datetime).strftime("%d/%m/%y")}\n{leave_type.th_name}\nเหลือ: {leave_balance.remaining_hours//8} วัน",
+                            text=f"{datetime.date(start_datetime).strftime("%d/%m/%y")} - {datetime.date(end_datetime).strftime("%d/%m/%y")}\n{leave_type.th_name}\nเหลือ: {leave_balance.remaining_hours // 8} วัน",
                             actions=[
                                 PostbackAction(
                                     label="อนุมัติ",
@@ -339,7 +347,7 @@ def leave_request_view_auth(request):
                                 # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
                                 # Add image URL here
                                 title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
-                                text=f"{datetime.date(start_datetime).strftime("%d/%m/%y")} - {datetime.date(end_datetime).strftime("%d/%m/%y")}\n{leave_type.th_name}\nเหลือ: {leave_balance.remaining_hours//8} วัน",
+                                text=f"{datetime.date(start_datetime).strftime("%d/%m/%y")} - {datetime.date(end_datetime).strftime("%d/%m/%y")}\n{leave_type.th_name}\nเหลือ: {leave_balance.remaining_hours // 8} วัน",
                                 actions=[
                                     PostbackAction(
                                         label="ยกเลิก",
@@ -378,7 +386,8 @@ def leave_request_detail(request, leave_id):
     leave_request = get_object_or_404(LeaveAttendance, id=leave_id)
 
     # Calculate working hours only
-    leave_hours = calculate_working_hours(leave_request.start_datetime, leave_request.end_datetime)
+    total_duration = calculate_working_hours(leave_request.start_datetime, leave_request.end_datetime)
+    leave_hours = f"{total_duration // 8:.0f} วัน" if total_duration >= 8 else f"{total_duration:.1f} ชม."
     staff = BsnStaff.objects.filter(django_usr_id=leave_request.user.id).first()
     approver = BsnStaff.objects.filter(django_usr_id=leave_request.approve_user.id).first()
 
@@ -431,22 +440,60 @@ def leave_request_detail(request, leave_id):
         return HttpResponseForbidden("คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ !")
 
     return render(request, "attendance/leave_request_detail.html",
-                  {"leave_request": leave_request, "staff": staff, "approver": approver, "leave_hours":leave_hours})
+                  {"leave_request": leave_request, "staff": staff, "approver": approver, "leave_hours": leave_hours})
 
 
 @login_required(login_url='log-in')
 def leave_requests_approval(request):
-    # Determine if the user is an approver or requester
-    if BsnStaff.objects.filter(django_usr_id=request.user, staff_type="manager").exists():
-        # Approver: Fetch requests assigned to this user
-        leave_requests = LeaveAttendance.objects.filter(approve_user=request.user).order_by('-start_datetime')
-        role = "approver"
-    else:
+    # Determine if the user is an approver
+    if not BsnStaff.objects.filter(django_usr_id=request.user, staff_type="manager").exists():
         return JsonResponse({"error": "คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ได้"}, status=400)
+
+    # Base queryset for approver
+    leave_requests = LeaveAttendance.objects.filter(approve_user=request.user).order_by('-start_datetime')
+
+    # Apply filters from query parameters
+    status = request.GET.get("status")
+    user = request.GET.get("user")
+    leave_type = request.GET.get("leave_type")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    if status:
+        leave_requests = leave_requests.filter(status=status)
+
+    if user:
+        leave_requests = leave_requests.filter(
+            Q(user__first_name__icontains=user) | Q(user__last_name__icontains=user)
+        )
+
+    if leave_type:
+        leave_requests = leave_requests.filter(leave_type__id=leave_type)
+
+    if start_date:
+        start_date_obj = parse_date(start_date)
+        if start_date_obj:
+            leave_requests = leave_requests.filter(start_datetime__date__gte=start_date_obj)
+
+    if end_date:
+        end_date_obj = parse_date(end_date)
+        if end_date_obj:
+            leave_requests = leave_requests.filter(end_datetime__date__lte=end_date_obj)
+
+    # Enrich the data for display
+    for leave_request in leave_requests:
+        leave_hours = calculate_working_hours(leave_request.start_datetime, leave_request.end_datetime)
+        leave_request.total_duration = (
+            f"{leave_hours // 8:.0f} วัน" if leave_hours >= 8 else f"{leave_hours:.1f} ชม."
+        )
+        leave_request.staff_brc = BsnStaff.objects.filter(django_usr_id=leave_request.user).first().brc_id.brc_sname
+
+    leave_types = LeaveType.objects.all()
 
     return render(request, "attendance/leave_requests_approval.html", {
         "leave_requests": leave_requests,
-        "role": role,
+        "role": "approver",
+        "leave_types": leave_types,
     })
 
 
@@ -455,11 +502,44 @@ def leave_requests_list(request):
     # Determine if the user is an approver or requester
     if BsnStaff.objects.filter(django_usr_id=request.user).exists():
         leave_requests = LeaveAttendance.objects.filter(user=request.user).order_by('-start_datetime')
+
+        # Apply filters from query parameters
+        status = request.GET.get("status")
+        leave_type = request.GET.get("leave_type")
+        start_date = request.GET.get("start_date")
+        end_date = request.GET.get("end_date")
+
+        if status:
+            leave_requests = leave_requests.filter(status=status)
+
+        if leave_type:
+            leave_requests = leave_requests.filter(leave_type__id=leave_type)
+
+        if start_date:
+            start_date_obj = parse_date(start_date)
+            if start_date_obj:
+                leave_requests = leave_requests.filter(start_datetime__date__gte=start_date_obj)
+
+        if end_date:
+            end_date_obj = parse_date(end_date)
+            if end_date_obj:
+                leave_requests = leave_requests.filter(end_datetime__date__lte=end_date_obj)
+
+        for leave_request in leave_requests:
+            # Calculate working hours only
+            leave_hours = calculate_working_hours(leave_request.start_datetime, leave_request.end_datetime)
+            leave_request.total_duration = (
+                f"{leave_hours // 8:.0f} วัน" if leave_hours >= 8 else f"{leave_hours:.1f} ชม."
+            )
+            leave_request.staff_brc = BsnStaff.objects.filter(django_usr_id=leave_request.user).first().brc_id.brc_sname
     else:
         return JsonResponse({"error": "คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ได้"}, status=400)
 
+    leave_types = LeaveType.objects.all()
+
     return render(request, "attendance/leave_requests_list.html", {
         "leave_requests": leave_requests,
+        "leave_types": leave_types,
     })
 
 

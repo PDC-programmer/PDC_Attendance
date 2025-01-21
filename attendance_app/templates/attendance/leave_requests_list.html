@@ -6,40 +6,62 @@
 <div class="d-flex justify-content-center align-items-center vh-100">
 <div class="container " style="width: 95%;">
     <h1 class="text-center my-4">รายการคำขออนุมัติ</h1>
+    <!-- Search and Filter Form -->
+        <form id="filter-form" class="mb-4 row g-3">
 
-    {% if role == "approver" %}
-    <div class="mb-3 text-end">
-        <button id="approve-selected" class="btn btn-success btn-sm">อนุมัติที่เลือก</button>
-        <button id="reject-selected" class="btn btn-danger btn-sm">ปฏิเสธที่เลือก</button>
-    </div>
-    {% endif %}
+            <div class="col-md-3">
+                <label for="filter-status" class="form-label">สถานะ</label>
+                <select id="filter-status" name="status" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    <option value="pending">รออนุมัติ</option>
+                    <option value="approved">อนุมัติ</option>
+                    <option value="rejected">ปฏิเสธ</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="filter-leave-type" class="form-label">ประเภท</label>
+                <select id="filter-leave-type" name="leave_type" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    {% for leave_type in leave_types %}
+                    <option value="{{ leave_type.id }}">{{ leave_type.th_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="filter-start-date" class="form-label">เริ่มวันที่</label>
+                <input type="date" id="filter-start-date" name="start_date" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="filter-end-date" class="form-label">สิ้นสุดวันที่</label>
+                <input type="date" id="filter-end-date" name="end_date" class="form-control">
+            </div>
+
+            <div class="col-md-12 text-start">
+                <button type="button" id="filter-button" class="btn btn-primary btn-sm">ค้นหา</button>
+                <button type="button" id="reset-button" class="btn btn-secondary btn-sm">ล้าง</button>
+            </div>
+        </form>
     <hr>
 
     <table class="table table-bordered table-hover">
         <thead class="table-light">
             <tr>
-                {% if role == "approver" %}
-                <th scope="col"><input type="checkbox" id="select-all"></th>
-                {% endif %}
-                <th scope="col">ประเภทการลา</th>
+                <th scope="col">ประเภท</th>
                 <th scope="col">ช่วงเวลา</th>
-                <th scope="col">เหตุผล</th>
-                <th scope="col">สถานะ</th>
-                {% if role == "approver" %}
-                <th scope="col">ผู้ขอ</th>
-                {% endif %}
-                <th scope="col">เพิ่มเติม</th>
+                <th scope="col">จำนวน</th>
+                <th scope="col">ผู้อนุมัติ</th>
+                 <th scope="col">สถานะ</th>
             </tr>
         </thead>
         <tbody>
             {% for request in leave_requests %}
-            <tr>
-                {% if role == "approver" %}
-                <td><input type="checkbox" class="select-leave" value="{{ request.id }}"></td>
-                {% endif %}
+            <tr class="clickable-row" data-href="/attendance/leave-request-detail/{{ request.id }}/">
                 <td>{{ request.leave_type.th_name }}</td>
                 <td>{{ request.start_datetime|date:"d/m/Y H:i" }} - {{ request.end_datetime|date:"d/m/Y H:i" }}</td>
-                <td>{{ request.reason }}</td>
+                <td>{{ request.total_duration }}</td>
+                <td>{{ request.approve_user.get_full_name }}</td>
                 <td>
                     <span class="badge {% if request.status == 'approved' %}bg-success
                                     {% elif request.status == 'rejected' %}bg-danger
@@ -47,12 +69,6 @@
                                     {% else %}bg-secondary{% endif %}">
                         {{ request.get_status_display }}
                     </span>
-                </td>
-                {% if role == "approver" %}
-                <td>{{ request.user.get_full_name }}</td>
-                {% endif %}
-                <td>
-                    <a href="/attendance/leave-request-detail/{{ request.id }}/" class="btn btn-sm btn-primary">รายละเอียด</a>
                 </td>
             </tr>
             {% endfor %}
@@ -63,46 +79,28 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const selectAll = document.getElementById("select-all");
-    const checkboxes = document.querySelectorAll(".select-leave");
 
-    if (selectAll) {
-        selectAll.addEventListener("change", () => {
-            checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
+    // Filter functionality
+    document.getElementById("filter-button").addEventListener("click", () => {
+        const status = document.getElementById("filter-status").value;
+        const leaveType = document.getElementById("filter-leave-type").value;
+        const startDate = document.getElementById("filter-start-date").value;
+        const endDate = document.getElementById("filter-end-date").value;
+
+        let url = `/attendance/leave-requests-list/?status=${status}&leave_type=${leaveType}&start_date=${startDate}&end_date=${endDate}`;
+        window.location.href = url;
+    });
+
+    document.getElementById("reset-button").addEventListener("click", () => {
+        document.getElementById("filter-form").reset();
+    });
+
+    // Make rows clickable
+    document.querySelectorAll(".clickable-row").forEach(row => {
+        row.addEventListener("click", function () {
+            window.location.href = this.dataset.href;
         });
-    }
-
-    function batchAction(action) {
-        const selectedIds = Array.from(checkboxes)
-            .filter(checkbox => checkbox.checked)
-            .map(checkbox => checkbox.value);
-
-        if (selectedIds.length === 0) {
-            Swal.fire("Error", "กรุณาเลือกคำขอก่อน", "error");
-            return;
-        }
-
-        fetch("/attendance/batch-action/", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}",
-            },
-            body: JSON.stringify({ action, leave_ids: selectedIds }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                Swal.fire("Error", data.error, "error");
-            } else {
-                Swal.fire("Success", data.message, "success").then(() => location.reload());
-            }
-        })
-        .catch(err => Swal.fire("Error", "An error occurred. Please try again.", "error"));
-    }
-
-    document.getElementById("approve-selected").addEventListener("click", () => batchAction("approve"));
-    document.getElementById("reject-selected").addEventListener("click", () => batchAction("reject"));
+    });
 });
 </script>
 {% endblock %}

@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'user_app',
     'line_app',
     'general_app',
+    'branch_app',
 
     # allauth
     'django.contrib.sites',
@@ -183,5 +184,3 @@ django_heroku.settings(locals())  # Activate Django-Heroku.
 # Working hours settings (24-hour format)
 WORKING_HOURS_START = "09:00"
 WORKING_HOURS_END = "18:00"
-
-

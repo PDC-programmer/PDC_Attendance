@@ -14,6 +14,8 @@
             <p class="mx-4"><strong>ตำแหน่ง:</strong> <span id="employee-title">Loading...</span></p>
             <p class="mx-4"><strong>แผนก:</strong> <span id="employee-department">Loading...</span></p>
             <p class="mx-4"><strong>รหัสพนักงาน:</strong> <span id="employee-staff-code">Loading...</span></p>
+            <p class="mx-4"><strong>สาขา:</strong> <span id="employee-branch">Loading...</span></p>
+            <p class="mx-4"><strong>วันเริ่มงาน:</strong> <span id="employee-date-of-start">Loading...</span></p>
         </div>
         <hr>
         <!-- Leave Request Form -->
@@ -185,9 +187,11 @@
                         Swal.fire("Error", data.error, "error");
                     } else {
                         document.getElementById("employee-name").textContent = `${data.staff_fname} ${data.staff_lname}`;
-                        document.getElementById("employee-title").textContent = data.staff_title || "-";
+                        document.getElementById("employee-title").textContent = data.staff_brc || "-";
                         document.getElementById("employee-department").textContent = data.staff_department || "-";
                         document.getElementById("employee-staff-code").textContent = data.staff_code || "-";
+                        document.getElementById("employee-branch").textContent = data.staff_brc || "-";
+                        document.getElementById("employee-date-of-start").textContent = data.date_of_start || "-";
                     }
                 })
                 .catch(err => console.error("Error loading employee information:", err));
@@ -276,7 +280,7 @@
                                 card.innerHTML = `
                                     <div class="card-body">
                                         <h4 class="card-title my-2">รหัสคำขออนุมัติ: ${request.id}</h4>
-                                        <p class="card-text">ประเภทการลา: ${request.leave_type}</p>
+                                        <p class="card-text">ประเภท: ${request.leave_type}</p>
                                         <p class="card-text">ช่วงเวลา: ${formatDateTime(request.start_datetime)} - ${formatDateTime(request.end_datetime)}</p>
                                         <p class="card-text">เหตุผล: ${request.reason}</p>
                                         <p class="card-text">ผู้อนุมัติ: ${request.approve_user}</p>
