@@ -3,7 +3,7 @@
 {% block title %}การขออนุมัติ{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-center align-items-center">
+<div class="d-flex justify-content-center align-items-center my-5">
 <div class="container " style="width: 95%;">
         <h1 class="text-center">คำขออนุมัติการลาของคุณ</h1>
 
@@ -21,7 +21,7 @@
 
         <!-- Leave Balances -->
         <h4 class="text-center">สิทธิ์คงเหลือ</h4>
-        <table class="table table-bordered ">
+        <table class="table table-bordered table-hover ">
             <thead class="table-light">
                 <tr>
                     <th>ประเภทการลา</th>
@@ -30,7 +30,9 @@
                 </tr>
             </thead>
             <tbody id="leave-balance-table">
-                <tr>
+
+                <tr class="clickable-row" data-href="/attendance/leave-requests-list/?leave_type={{ balance.leave_type_id }}">
+
 <!--                    <td colspan="3" class="text-center">Loading...</td>-->
                     <td colspan="3" class="text-center text-muted">ไม่พบข้อมูลสิทธิ์คงเหลือ</td>
                 </tr>
@@ -70,9 +72,9 @@
                 </div>
                 <div class="mb-3 col-md-3">
                     <label for="end-hour" class="form-label">ชั่วโมง</label>
-                    <select id="end-hour" name="end_hour" class="form-select" required>
+                    <select id="end-hour" name="end_hour" class="form-select"  required>
                         {% for hour in hours_range %}
-                        <option value="{{ hour }}">{{ hour }}</option>
+                        <option value="{{ hour }}" {% if hour == 18 %}selected{% endif %}>{{ hour }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -187,7 +189,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        Swal.fire("Error", data.error, "error");
+                        Swal.fire("ผิดพลาด", data.error, "error");
                     } else {
                         document.getElementById("employee-name").textContent = `${data.staff_fname} ${data.staff_lname}`;
                         document.getElementById("employee-title").textContent = data.staff_title || "-";
@@ -213,6 +215,14 @@
                 })
                 .catch(err => console.error("Error loading leave types:", err));
 
+            leaveBalanceTable.addEventListener("click", (event) => {
+                const row = event.target.closest(".clickable-row");
+                if (row && row.dataset.href) {
+                    window.location.href = row.dataset.href;
+                }
+            });
+
+
             // Load leave balances
             fetch("/attendance/get-leave-balances/")
                 .then(response => response.json())
@@ -220,6 +230,8 @@
                     leaveBalanceTable.innerHTML = "";
                     data.forEach(balance => {
                         const row = document.createElement("tr");
+                        row.className = "clickable-row";
+                        row.dataset.href = `/attendance/leave-requests-list/?leave_type=${balance.leave_type_id}`;
                         row.innerHTML = `
                             <td>${balance.leave_type}</td>
                             <td>${Math.floor(balance.used_hours / 8)} วัน (${balance.used_hours} ชม.)</td>
@@ -258,15 +270,15 @@
                 const startDate = document.getElementById("filter-start-date").value;
                 const leaveType = document.getElementById("filter-leave-type").value;
 
-<!--                // Show loading alert-->
-<!--                Swal.fire({-->
-<!--                    title: 'กำลังค้นหาข้อมูล...',-->
-<!--                    text: 'กรุณารอสักครู่...',-->
-<!--                    allowOutsideClick: false,-->
-<!--                    didOpen: () => {-->
-<!--                        Swal.showLoading();-->
-<!--                    }-->
-<!--                });-->
+                // Show loading alert
+                Swal.fire({
+                    title: 'กำลังค้นหาข้อมูล...',
+                    text: 'กรุณารอสักครู่...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
                 let url = "/attendance/get-leave-attendances/?";
                 if (startDate) url += `start_datetime=${startDate}&`;
@@ -298,9 +310,9 @@
                         } else {
                             leaveHistory.innerHTML = `<p class="text-center text-muted">ไม่พบข้อมูลคำขอการลาตามเงื่อนไข</p>`;
                         }
+                        Swal.close(); // Close loading alert
                     })
                     .catch(err => console.error("Error filtering leave history:", err));
-<!--                Swal.close(); // Close loading alert-->
             });
 
             // Reset filters
@@ -380,17 +392,17 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        Swal.fire("Error", data.error, "error");
+                        Swal.fire("ผิดพลาด", data.error, "error");
                     }
                      else {
-                        Swal.fire("Success", "บันทึกคำขออนุมัติเสร็จสิ้น", "success").then(() => {
+                        Swal.fire("สำเร็จ", "บันทึกคำขออนุมัติเสร็จสิ้น", "success").then(() => {
                             location.reload();
                         });
                     }
                 })
                 .catch(err => {
-                    Swal.fire("Error", "An error occurred. Please try again.", "error");
-                    console.error("Error submitting leave request:", err);
+                    Swal.fire("ผิดพลาด", "เกิดข้อผิดพลาดกรุณาลองใหม่อีกครั้ง", "error");
+                    console.error("ไม่สามารถบันทึกคำขออนุมัติได้ !:", err);
                 });
             });
             // ฟังก์ชันแปลงวันที่ให้เป็น ISO Format
