@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .map(checkbox => checkbox.value);
 
         if (selectedIds.length === 0) {
-            Swal.fire("Error", "กรุณาเลือกคำขอก่อน", "error");
+            Swal.fire("ผิดพลาด", "กรุณาเลือกคำขอก่อน", "error");
             return;
         }
 
@@ -141,12 +141,12 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                Swal.fire("Error", data.error, "error");
+                Swal.fire("ผิดพลาด", data.error, "error");
             } else {
-                Swal.fire("Success", data.message, "success").then(() => location.reload());
+                Swal.fire("สำเร็จ", data.message, "success").then(() => location.reload());
             }
         })
-        .catch(err => Swal.fire("Error", "An error occurred. Please try again.", "error"));
+        .catch(err => Swal.fire("ผิดพลาด", "เกิดข้อผิดพลาดกรุณาลองใหม่อีกครั้ง !", "error"));
     }
 
     document.getElementById("approve-selected").addEventListener("click", () => batchAction("approve"));

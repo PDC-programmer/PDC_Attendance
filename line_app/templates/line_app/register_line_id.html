@@ -32,7 +32,7 @@
 
             if (!staffCode) {
                 Swal.fire({
-                    icon: 'error',
+                    icon: 'ผิดพลาด',
                     title: 'ข้อมูลไม่ครบถ้วน...',
                     text: 'กรุณากรอกข้อมูลให้ครบถ้วน !',
                 });
@@ -60,7 +60,7 @@
             .then(data => {
                 if (data.error) {
                     Swal.fire({
-                        icon: 'error',
+                        icon: 'ผิดพลาด',
                         title: 'เกิดข้อผิดพลาด',
                         text: data.error,
                     });
@@ -104,13 +104,13 @@
                             .then(data => {
                                 if (data.error) {
                                     Swal.fire({
-                                        icon: 'error',
+                                        icon: 'ผิดพลาด',
                                         title: 'เกิดข้อผิดพลาด',
                                         text: data.error,
                                     });
                                 } else {
                                     Swal.fire({
-                                        icon: 'success',
+                                        icon: 'สำเร็จ',
                                         title: 'เสร็จสมบูรณ์',
                                         text: 'ลงทะเบียนเสร็จสมบูรณ์ !',
                                     }).then(function() {
@@ -120,11 +120,11 @@
                             })
                             .catch(error => {
                                 Swal.fire({
-                                    icon: 'error',
+                                    icon: 'ผิดพลาด',
                                     title: 'เกิดข้อผิดพลาด',
                                     text: 'ไม่สามารถลงทะเบียนได้ !',
                                 });
-                                console.error("Error:", error);
+                                console.error("ผิดพลาด:", error);
                             });
                         }
                     });
@@ -132,11 +132,11 @@
             })
             .catch(error => {
                 Swal.fire({
-                    icon: 'error',
+                    icon: 'ผิดพลาด',
                     title: 'เกิดข้อผิดพลาด',
                     text: 'ไม่สามารถดึงข้อมูลพนักงานได้ !',
                 });
-                console.error("Error:", error);
+                console.error("ผิดพลาด:", error);
             });
         });
     });

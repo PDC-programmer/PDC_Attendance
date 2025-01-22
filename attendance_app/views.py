@@ -34,7 +34,8 @@ def get_leave_types(request):
 def get_leave_balances(request):
     # ดึงข้อมูลประเภทการลา
     leave_balances = LeaveBalance.objects.filter(user=request.user)
-    data = [{"leave_type": leave.leave_type.th_name,
+    data = [{"leave_type_id": leave.id,
+             "leave_type": leave.leave_type.th_name,
              "used_hours": leave.total_hours - leave.remaining_hours,
              "remaining_hours": leave.remaining_hours
              } for leave in leave_balances]
@@ -374,7 +375,7 @@ def leave_request_view_auth(request):
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
 
     context = {
-        "hours_range": range(8, 22),  # ช่วงชั่วโมงตั้งแต่ 8 ถึง 21
+        "hours_range": range(9, 19),  # ช่วงชั่วโมงตั้งแต่ 8 ถึง 21
     }
 
     return render(request, "attendance/leave_request_auth.html", context)
