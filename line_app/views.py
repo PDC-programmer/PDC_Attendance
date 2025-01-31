@@ -130,10 +130,10 @@ def get_staff_info(request, staff_code):
     }, status=200)
 
 
-@login_required
+
 def user_info(request):
     users = request.user
-    social_account = SocialAccount.objects.filter(user=users)
+    social_account = SocialAccount.objects.all()
     template = loader.get_template('line_app/user_info.html')
     context = {
         'users': social_account,

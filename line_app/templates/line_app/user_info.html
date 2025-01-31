@@ -1,16 +1,24 @@
-<!DOCTYPE html>
-<html>
-<body>
+{% extends "general/base.html" %}
 
-<h1>User</h1>
+{% block title %}ลงทะเบียน{% endblock %}
 
-<ul>
-  {% for x in users %}
-    <li>{{ x }}</li>
-    <li>{{ x.user.uid }}</li>
-    <li><img src="{{ x.extra_data.picture }}" alt="Attached Image"></li>
-  {% endfor %}
-</ul>
+{% block content %}
+<div class="d-flex justify-content-center align-items-center">
+    <div class="container text-center" style="width: 95%;">
 
-</body>
-</html>
+<h1>Social account</h1>
+
+
+      {% for x in users %}
+      <div class="card">
+        <div class="card-body my-4">
+        <p>{{ x }}</p>
+        <p>{{ x.extra_data.name }}</p>
+        <img src="{{ x.extra_data.picture }}" alt="Attached Image" width="126" height="120">
+        </div>
+      </div>
+      {% endfor %}
+
+  </div>
+</div>
+{% endblock %}
