@@ -79,7 +79,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.line',
 ]
 
-SOCIALACCOUNT_ADAPTER = "line_app.custom_adapter.CustomSocialAccountAdapter"
+SOCIALACCOUNT_ADAPTER = "line_app.adapters.CustomSocialAccountAdapter"
 
 
 MIDDLEWARE = [
