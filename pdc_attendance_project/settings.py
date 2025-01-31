@@ -79,6 +79,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.line',
 ]
 
+ACCOUNT_ADAPTER = 'line_app.adapters.MyCustomAccountAdapter'
+
 MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     'django.middleware.security.SecurityMiddleware',
