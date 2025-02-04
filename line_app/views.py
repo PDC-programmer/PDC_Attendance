@@ -197,6 +197,8 @@ def handle_postback(event):
                 event.reply_token,
                 TextSendMessage(text="ไม่สามารถทำรายการได้ คำขออนุมัตินี้ยกเลิกไปแล้ว !")
             )
+
+            return
         elif leave_record.status in ["approved", "rejected"] and action in ["approve", "reject"]:
             line_bot_api.reply_message(
                 event.reply_token,

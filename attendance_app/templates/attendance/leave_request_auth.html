@@ -27,6 +27,7 @@
                     <th>ประเภทการลา</th>
                     <th>สิทธิ์ที่ใช้แล้ว</th>
                     <th>สิทธิ์คงเหลือ</th>
+                    <th>สิทธิ์ที่ได้รับ</th>
                 </tr>
             </thead>
             <tbody id="leave-balance-table">
@@ -236,6 +237,7 @@
                             <td>${balance.leave_type}</td>
                             <td>${Math.floor(balance.used_hours / 8)} วัน (${balance.used_hours} ชม.)</td>
                             <td>${Math.floor(balance.remaining_hours / 8)} วัน (${balance.remaining_hours} ชม.)</td>
+                            <td>${Math.floor(balance.total_hours / 8)} วัน (${balance.total_hours} ชม.)</td>
                         `;
                         leaveBalanceTable.appendChild(row);
                     });
