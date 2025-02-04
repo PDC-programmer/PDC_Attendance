@@ -37,7 +37,8 @@ def get_leave_balances(request):
     data = [{"leave_type_id": leave.id,
              "leave_type": leave.leave_type.th_name,
              "used_hours": leave.total_hours - leave.remaining_hours,
-             "remaining_hours": leave.remaining_hours
+             "remaining_hours": leave.remaining_hours,
+             "total_hours": leave.total_hours,
              } for leave in leave_balances]
     return JsonResponse(data, safe=False)
 
