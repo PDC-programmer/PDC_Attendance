@@ -12,6 +12,7 @@ class User(AbstractUser):
     id = models.AutoField(primary_key=True)
     image = models.ImageField(upload_to=user_image_path, null=True, blank=True)
     role = models.CharField(max_length=100, null=True, blank=True)
+    nick_name = models.CharField(max_length=100, null=True, blank=True)
 
 
 class BsnStaff(models.Model):

@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from user_app.models import User, BsnStaff
 from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveType
 from django.views.decorators.csrf import csrf_exempt
@@ -7,13 +7,16 @@ import json
 from django.conf import settings
 from linebot import LineBotApi
 from linebot.models import TemplateSendMessage, ButtonsTemplate, PostbackAction, TextSendMessage, URIAction
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from allauth.socialaccount.models import SocialAccount
 from attendance_app.utils import calculate_working_hours  # Import the utility function
 from django.utils.timezone import now
 from django.db.models import Q
 from datetime import datetime
 from django.utils.dateparse import parse_date
+import csv
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -400,15 +403,17 @@ def leave_request_detail(request, leave_id):
     if request.method == "POST":
         action = request.POST.get("action")
 
+        # Deduct leave balance
+        leave_balance = LeaveBalance.objects.filter(
+            user=leave_request.user, leave_type=leave_request.leave_type
+        ).first()
+
         if action == "approve" and request.user == leave_request.approve_user:
             if leave_request.status != "approved":
                 leave_request.status = "approved"
-
-                # Deduct leave balance
-                leave_balance = LeaveBalance.objects.filter(
-                    user=leave_request.user, leave_type=leave_request.leave_type
-                ).first()
-
+                leave_request.updated_at = now()
+                leave_balance.updated_at = now()
+                leave_balance.save()
                 leave_request.save()
                 return JsonResponse({"message": "อนุมัติคำขออนุมัติเสร็จสิ้น"}, status=200)
             else:
@@ -417,12 +422,9 @@ def leave_request_detail(request, leave_id):
         elif action == "reject" and request.user == leave_request.approve_user:
             if leave_request.status != "rejected":
                 leave_request.status = "rejected"
-
-                # Deduct leave balance
-                leave_balance = LeaveBalance.objects.filter(
-                    user=leave_request.user, leave_type=leave_request.leave_type
-                ).first()
-
+                leave_request.updated_at = now()
+                leave_balance.updated_at = now()
+                leave_balance.save()
                 leave_request.save()
                 return JsonResponse({"message": "ปฏิเสธคำขออนุมัติเสร็จสิ้น"}, status=200)
             else:
@@ -434,6 +436,9 @@ def leave_request_detail(request, leave_id):
 
             if leave_request.status in ["pending", "approved"]:
                 leave_request.status = "cancelled"
+                leave_request.updated_at = now()
+                leave_balance.updated_at = now()
+                leave_balance.save()
                 leave_request.save()
                 return JsonResponse({"message": "ยกเลิกคำขออนุมัติเสร็จสิ้น"}, status=200)
             else:
@@ -580,3 +585,165 @@ def batch_action(request):
             return JsonResponse({"error": f"พบข้อผิดพลาด: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "การทำงานผิดพลาด"}, status=405)
+
+
+# ตรวจสอบว่า user มี is_staff เป็น True
+def is_staff_check(user):
+    return user.is_staff
+
+
+@login_required(login_url='log-in')
+@user_passes_test(is_staff_check)
+def leave_attendance_list(request):
+    # รับค่าค้นหาและฟิลเตอร์จาก request GET
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
+    # Query เบื้องต้น
+    leave_attendances = LeaveAttendance.objects.select_related('user')
+
+    # ถ้ามีการค้นหา
+    if search_query:
+        leave_attendances = leave_attendances.filter(
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query) |
+            Q(user__username__icontains=search_query) |
+            Q(leave_type__th_name__icontains=search_query)
+        )
+
+    # ถ้ามีการกรองสถานะ
+    if status_filter:
+        leave_attendances = leave_attendances.filter(status=status_filter)
+
+    # ถ้ามีการกรองวันที่
+    if start_date and end_date:
+        leave_attendances = leave_attendances.filter(
+            start_datetime__date__gte=start_date,
+            start_datetime__date__lte=end_date
+        )
+
+    # เตรียมข้อมูลสำหรับ Template
+    data = []
+    for attendance in leave_attendances:
+        total_duration = calculate_working_hours(attendance.start_datetime, attendance.end_datetime)
+        leave_hours = f"{total_duration // 8:.0f} วัน" if total_duration >= 8 else f"{total_duration:.1f} ชม."
+        bsn_staff = BsnStaff.objects.filter(django_usr_id=attendance.user).first()
+        forward_or_backward_days = (attendance.start_datetime - attendance.created_at).days
+        n_name = f"{attendance.user.nick_name}" if attendance.user.nick_name is not None else '-'
+        data.append({
+            'date_range': f"{attendance.start_datetime:%d/%m/%Y} - {attendance.end_datetime:%d/%m/%Y}",
+            'staff_code': bsn_staff.staff_code if bsn_staff else 'N/A',
+            'full_name': f"{attendance.user.first_name} {attendance.user.last_name}",
+            'nickname': n_name,
+            'position': bsn_staff.staff_title if bsn_staff else 'N/A',
+            'branch': bsn_staff.brc_id.brc_sname if bsn_staff else 'N/A',
+            'leave_type': attendance.leave_type.th_name if attendance.leave_type else 'N/A',
+            'request_by': f"{attendance.user.first_name} {attendance.user.last_name}",
+            'request_date': f"{attendance.created_at:%d/%m/%Y %H:%M} น.",
+            'status': attendance.get_status_display(),
+            'approved_by': f"{attendance.approve_user.first_name} {attendance.approve_user.last_name}" if attendance.approve_user else 'N/A',
+            'updated_at': f"{attendance.updated_at:%d/%m/%Y %H:%M} น." if attendance.updated_at is not None else '-',
+            'details': f"{attendance.user.first_name} {attendance.user.last_name} ({n_name}) ยื่นขอ \"{attendance.leave_type.th_name if attendance.leave_type else 'N/A'}\" ขอลางาน ตั้งแต่วันที่ {attendance.start_datetime:%d/%m/%Y %H:%M} ถึงวันที่ {attendance.end_datetime:%d/%m/%Y %H:%M} หมายเหตุ : {attendance.reason}",
+            'hours': leave_hours,
+            'total_days': leave_hours,
+            'amount': '0.00',
+            'forward_or_backward': f'ย้อนหลัง {forward_or_backward_days*(-1)} วัน' if attendance.start_datetime < attendance.created_at else f'ล่วงหน้า {forward_or_backward_days} วัน'
+        })
+
+    return render(request, 'attendance/leave_attendance_list.html', {
+        'data': data,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'start_date': start_date,
+        'end_date': end_date
+    })
+
+
+@login_required(login_url='log-in')
+@user_passes_test(is_staff_check)
+def export_leave_attendance_excel(request):
+    # รับค่าการค้นหาและฟิลเตอร์จาก request GET
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
+    # Query เบื้องต้น
+    leave_attendances = LeaveAttendance.objects.select_related('user')
+
+    # ถ้ามีการค้นหา
+    if search_query:
+        leave_attendances = leave_attendances.filter(
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query) |
+            Q(user__username__icontains=search_query) |
+            Q(leave_type__th_name__icontains=search_query)
+        )
+
+    # ถ้ามีการกรองสถานะ
+    if status_filter:
+        leave_attendances = leave_attendances.filter(status=status_filter)
+
+    # ถ้ามีการกรองวันที่
+    if start_date and end_date:
+        leave_attendances = leave_attendances.filter(
+            start_datetime__date__gte=start_date,
+            end_datetime__date__lte=end_date
+        )
+
+    # สร้าง Workbook และ Sheet
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "รายการลาของพนักงาน"
+
+    # เขียน Header
+    headers = [
+        'ลำดับ', 'วันที่', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'ชื่อเล่น',
+        'ตำแหน่ง', 'สำนักงานสาขา', 'ประเภท', 'ขอโดย', 'ขอวันที่',
+        'สถานะ', 'ผู้อนุมัติ', 'อัพเดทเมื่อ', 'รายละเอียด', 'ชั่วโมง/วัน',
+        'รวมเป็นเงิน', 'ย้อนหลัง/ล่วงหน้า'
+    ]
+    sheet.append(headers)
+
+    # ดึงข้อมูลและเขียนลงในไฟล์ Excel
+    for idx, attendance in enumerate(leave_attendances):
+        total_duration = calculate_working_hours(attendance.start_datetime, attendance.end_datetime)
+        leave_hours = f"{total_duration // 8:.0f} วัน" if total_duration >= 8 else f"{total_duration:.1f} ชม."
+        bsn_staff = BsnStaff.objects.filter(django_usr_id=attendance.user).first()
+        date_range = f"{attendance.start_datetime:%d/%m/%Y} - {attendance.end_datetime:%d/%m/%Y}"
+        full_name = f"{attendance.user.first_name} {attendance.user.last_name}"
+        n_name = f"{attendance.user.nick_name}" if attendance.user.nick_name is not None else '-'
+        details = f"{full_name} ({n_name}) ยื่นขอ \"{attendance.leave_type.th_name if attendance.leave_type else 'N/A'}\" ขอลางาน ตั้งแต่วันที่ {attendance.start_datetime:%d/%m/%Y %H:%M} ถึงวันที่ {attendance.end_datetime:%d/%m/%Y %H:%M} หมายเหตุ : {attendance.reason}"
+        forward_or_backward_days = (attendance.start_datetime - attendance.created_at).days
+        # เขียนข้อมูลในแต่ละแถว
+        sheet.append([
+            idx + 1,
+            date_range,
+            bsn_staff.staff_code if bsn_staff else 'N/A',
+            full_name,
+            n_name,
+            bsn_staff.staff_title if bsn_staff else 'N/A',
+            bsn_staff.brc_id.brc_sname if bsn_staff else 'N/A',
+            attendance.leave_type.th_name if attendance.leave_type else 'N/A',
+            full_name,
+            f"{attendance.created_at:%d/%m/%Y %H:%M} น.",
+            attendance.get_status_display(),
+            f"{attendance.approve_user.first_name} {attendance.approve_user.last_name}" if attendance.approve_user else 'N/A',
+            f"{attendance.updated_at:%d/%m/%Y %H:%M} น." if attendance.updated_at is not None else '-',
+            details,
+            leave_hours,
+            '0.00',
+            f'ย้อนหลัง {forward_or_backward_days*(-1)} วัน' if attendance.start_datetime < attendance.created_at else f'ล่วงหน้า {forward_or_backward_days} วัน'
+        ])
+
+    # กำหนด Response สำหรับการดาวน์โหลดไฟล์
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename=leave_attendance_report_{now()}.xlsx'
+
+    # บันทึกไฟล์ Excel ลงใน Response
+    workbook.save(response)
+    return response

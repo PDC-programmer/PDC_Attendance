@@ -5,7 +5,8 @@ from datetime import datetime
 
 
 def leave_request_image_path(instance, filename):
-    return os.path.join(f"leave_request_images/{instance.user.username}/{datetime.date(instance.start_datetime)}", filename)
+    return os.path.join(f"leave_request_images/{instance.user.username}/{datetime.date(instance.start_datetime)}",
+                        filename)
 
 
 class LeaveType(models.Model):
@@ -30,6 +31,8 @@ class LeaveAttendance(models.Model):
                               default='pending')
     leave_type = models.ForeignKey(LeaveType, on_delete=models.DO_NOTHING, default='1')
     image = models.ImageField(upload_to=leave_request_image_path, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # auto add created date time
+    updated_at = models.DateTimeField(null=True, blank=True)  # Change to DateTimeField for precise times
 
     def __str__(self):
         return f"{self.user.username}: {self.status} ({self.start_datetime} to {self.end_datetime})"
@@ -40,6 +43,8 @@ class LeaveBalance(models.Model):
     leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE, related_name="leave_balances")
     total_hours = models.FloatField(default=0)  # Change to hours
     remaining_hours = models.FloatField(default=0)  # Change to hours
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # auto add created date time
+    updated_at = models.DateTimeField(null=True, blank=True)  # Change to DateTimeField for precise times
 
     def __str__(self):
         return f"{self.user.username} - {self.leave_type.th_name}: {self.remaining_hours} hours remaining"

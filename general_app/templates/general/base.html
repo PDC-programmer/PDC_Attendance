@@ -19,10 +19,10 @@
             background-color: #f8f9fa;
         }
         .navbar-brand, .nav-link {
-            color: #0a236c !important;
+            color: #03257e !important;
         }
         .nav-link:hover {
-            color: #0303fe !important;
+            color: #1944b5 !important;
         }
         .container {
             max-width: 600px;
@@ -36,7 +36,7 @@
             font-size: 1.2rem;
             margin-top: 20px;
             margin-bottom: 20px;
-            color: #2342de;
+            color: #1944b5;
         }
         .card {
             border: none;
@@ -88,11 +88,36 @@
         .clickable-row:hover {
             background-color: #f1f1f1;
         }
+        .sidebar {
+            width: 200px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: #03257e;
+            color: white;
+            padding-top: 64px;
+
+        }
+        .sidebar a {
+            padding: 10px 15px;
+            display: block;
+            color: white;
+            text-decoration: none;
+        }
+        .sidebar a:hover {
+            background-color: #1944b5;
+        }
+        .content {
+            margin-left: 220px; /* เพื่อเว้นที่ให้กับ sidebar */
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
+
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light">
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">
                 <img src="{% static 'images/logo.png' %}" alt="Logo" width="44" height="38">
@@ -100,12 +125,30 @@
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
+
             <div class="collapse navbar-collapse text-center" id="navbarNav">
+
                 <ul class="navbar-nav ms-auto text-start">
+
+
                     <li class="nav-item">
                         <a class="nav-link" href="/">หน้าแรก</a>
                     </li>
                     {% if user.is_authenticated %}
+                        {% if user.is_authenticated and user.is_staff %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown" href="#" id="managementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                จัดการ
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="managementDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'leave_attendance_list' %}">การลาของพนักงาน</a>
+                                </li>
+
+                            </ul>
+                        </li>
+                        {% endif %}
 
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -137,6 +180,17 @@
         </div>
     </nav>
 
+<!--    <div class="offcanvas offcanvas-start" data-bs-scroll="true" tabindex="-1" id="offcanvasWithBothOptions" aria-labelledby="offcanvasWithBothOptionsLabel">-->
+<!--      <div class="offcanvas-header">-->
+<!--        <h5 class="offcanvas-title" id="offcanvasWithBothOptionsLabel">Backdrop with scrolling</h5>-->
+<!--        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>-->
+<!--      </div>-->
+<!--      <div class="offcanvas-body">-->
+<!--        <p>Try scrolling the rest of the page to see this option in action.</p>-->
+<!--          &lt;!&ndash;        <a href="/">หน้าแรก</a>&ndash;&gt;-->
+<!--        <a href="{% url 'leave_attendance_list' %}">รายการการลา</a>-->
+<!--      </div>-->
+<!--    </div>-->
     <!-- Main Content -->
     {% block content %}
     {% endblock %}

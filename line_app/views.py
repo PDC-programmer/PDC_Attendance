@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -199,6 +200,15 @@ def handle_postback(event):
             )
 
             return
+
+        elif leave_record.status in ["rejected"] and action in ["cancel"]:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="ไม่สามารถยกเลิกได้ มีการพิจารณาคำขอการลานี้ไปแล้ว !")
+            )
+
+            return
+
         elif leave_record.status in ["approved", "rejected"] and action in ["approve", "reject"]:
             line_bot_api.reply_message(
                 event.reply_token,
@@ -223,7 +233,7 @@ def handle_postback(event):
                 TextSendMessage(text="Unknown action.")
             )
             return
-
+        leave_record.updated_at = now()
         leave_record.save()
 
         status_display = STATUS_DISPLAY.get(leave_record.status, "Unknown Status")
