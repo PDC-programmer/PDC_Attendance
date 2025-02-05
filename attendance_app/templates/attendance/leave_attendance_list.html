@@ -1,0 +1,104 @@
+{% extends "general/base.html" %}
+
+{% block title %}การลาของพนักงาน{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+    <div class="container " style="width: 95%;">
+        <h1>การลาของพนักงาน</h1>
+
+        <!-- ฟอร์มสำหรับค้นหาและกรอง -->
+        <form method="GET" class="row g-3 my-3">
+
+            <div class="col-md-4">
+                <label for="start_date" class="form-label">วันที่เริ่มต้น</label>
+                <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label for="end_date" class="form-label">วันที่สิ้นสุด</label>
+                <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-control">
+            </div>
+
+            <div class="col-md-4">
+                <label for="status" class="form-label">สถานะ</label>
+                <select name="status" id="status" class="form-select">
+                    <option value="">เลือกสถานะ</option>
+                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>อนุมัติ</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>รออนมุติ</option>
+                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>ปฏิเสธ</option>
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label for="search" class="form-label">ค้นหา</label>
+                <input type="text" name="search" id="search" value="{{ search_query }}" class="form-control" placeholder="ค้นหาชื่อ หรือ รหัสพนักงาน">
+            </div>
+
+            <div class="col-md-2 align-self-end">
+                <button type="submit" class="btn btn-primary btn-sm">ค้นหา</button>
+            </div>
+        </form>
+
+        <hr>
+
+        <!-- ฟอร์มสำหรับ Export Excel -->
+        <form method="GET" action="{% url 'export_leave_attendance_excel' %}">
+            <input type="hidden" name="search" value="{{ search_query }}">
+            <input type="hidden" name="status" value="{{ status_filter }}">
+            <input type="hidden" name="start_date" value="{{ start_date }}">
+            <input type="hidden" name="end_date" value="{{ end_date }}">
+            <button type="submit" class="btn btn-success mb-3 btn-sm">Export as Excel</button>
+        </form>
+
+        <!-- ตารางแสดงข้อมูล -->
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ลำดับ</th>
+                        <th>วันที่</th>
+                        <th>รหัสพนักงาน</th>
+                        <th>ชื่อ-นามสกุล</th>
+                        <th>ชื่อเล่น</th>
+                        <th>ตำแหน่ง</th>
+                        <th>สำนักงานสาขา</th>
+                        <th>ประเภท</th>
+                        <th>ขอโดย</th>
+                        <th>ขอวันที่</th>
+                        <th>สถานะ</th>
+                        <th>ผู้อนุมัติ</th>
+                        <th>อัพเดทเมื่อ</th>
+                        <th>รายละเอียด</th>
+                        <th>ชั่วโมง/วัน</th>
+                        <th>รวมเป็นเงิน</th>
+                        <th>ย้อนหลัง/ล่วงหน้า</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in data %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.date_range }}</td>
+                        <td>{{ item.staff_code }}</td>
+                        <td>{{ item.full_name }}</td>
+                        <td>{{ item.nickname }}</td>
+                        <td>{{ item.position }}</td>
+                        <td>{{ item.branch }}</td>
+                        <td>{{ item.leave_type }}</td>
+                        <td>{{ item.request_by }}</td>
+                        <td>{{ item.request_date }}</td>
+                        <td>{{ item.status }}</td>
+                        <td>{{ item.approved_by }}</td>
+                        <td>{{ item.updated_at }}</td>
+                        <td>{{ item.details }}</td>
+                        <td>{{ item.total_days }}</td>
+                        <td>{{ item.amount }}</td>
+                        <td>{{ item.forward_or_backward }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
