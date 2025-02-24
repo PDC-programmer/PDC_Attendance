@@ -1,0 +1,255 @@
+{% extends "general/base.html" %}
+
+{% block title %}การขออนุมัติ{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+<div class="container " style="width: 95%;">
+        <!-- Employee Information -->
+        <div class="card">
+            <h4 class="text-center">ข้อมูลพนักงาน</h4>
+            <p class="mx-4"><strong>ชื่อ:</strong> <span id="employee-name">Loading...</span></p>
+            <p class="mx-4"><strong>ตำแหน่ง:</strong> <span id="employee-title">Loading...</span></p>
+            <p class="mx-4"><strong>แผนก:</strong> <span id="employee-department">Loading...</span></p>
+            <p class="mx-4"><strong>รหัสพนักงาน:</strong> <span id="employee-staff-code">Loading...</span></p>
+            <p class="mx-4"><strong>สาขา:</strong> <span id="employee-branch">Loading...</span></p>
+            <p class="mx-4"><strong>วันเริ่มงาน:</strong> <span id="employee-date-of-start">Loading...</span></p>
+        </div>
+        <hr>
+
+        <!-- Leave Balances -->
+        <h4 class="text-center">สิทธิ์คงเหลือ</h4>
+        <div class="table-responsive">
+        <table class="table table-bordered table-hover ">
+            <thead class="table-light">
+                <tr>
+                    <th>ประเภทการลา</th>
+                    <th>สิทธิ์ที่ใช้แล้ว</th>
+                    <th>สิทธิ์คงเหลือ</th>
+                    <th>สิทธิ์ที่ได้รับ</th>
+                </tr>
+            </thead>
+            <tbody id="leave-balance-table">
+
+                <tr class="clickable-row" data-href="/attendance/leave-requests-list/?leave_type={{ balance.leave_type_id }}">
+
+                    <td colspan="4" class="text-center text-muted">ไม่พบข้อมูลสิทธิ์คงเหลือ</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        <hr>
+        <!-- Leave Request Form -->
+
+        <form id="leave-request-form" enctype="multipart/form-data">
+            <h4 class="text-center">การบันทึกคำขออนุมัติ</h4>
+            <div class="row g-3">
+                <div class="mb-3 col-md-6">
+                    <label for="start-date" class="form-label">เริ่มวันที่/เวลา</label>
+                    <input type="date" id="start-date" name="start_date" class="form-control form-input" required>
+                </div>
+                <div class="mb-3 col-md-3">
+                    <label for="start-hour" class="form-label">ชั่วโมง</label>
+                    <select id="start-hour" name="start_hour" class="form-select form-input" required>
+                        <!-- ชั่วโมงระหว่าง 07-21 -->
+                        {% for hour in hours_range %}
+                        <option value="{{ hour }}">{{ hour }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3 col-md-3">
+                    <label for="start-minute" class="form-label">นาที</label>
+                    <select id="start-minute" name="start_minute" class="form-select form-input" required>
+                        <option value="00">00</option>
+                        <option value="30">30</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="mb-3 col-md-6">
+                    <label for="end-date" class="form-label">ถึงวันที่/เวลา</label>
+                    <input type="date" id="end-date" name="end_date" class="form-control form-input" required>
+                </div>
+                <div class="mb-3 col-md-3">
+                    <label for="end-hour" class="form-label">ชั่วโมง</label>
+                    <select id="end-hour" name="end_hour" class="form-select form-input"  required>
+                        {% for hour in hours_range %}
+                        <option value="{{ hour }}" {% if hour == 18 %}selected{% endif %}>{{ hour }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3 col-md-3">
+                    <label for="end-minute" class="form-label">นาที</label>
+                    <select id="end-minute" name="end_minute" class="form-select form-input" required>
+                        <option value="00">00</option>
+                        <option value="30">30</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="leave-type" class="form-label">ประเภทการลา</label>
+                <select class="form-select form-input" id="leave-type" name="type" required>
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="reason" class="form-label">เหตุผล</label>
+                <textarea class="form-control form-input" id="reason" name="reason" rows="3" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="leave-image" class="form-label">รูปภาพ</label>
+                <input type="file" class="form-control form-input" id="leave-image" name="image" accept="image/*">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="width: 25%;">ยืนยัน</button>
+        </form>
+
+    </div>
+</div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const leaveTypeSelect = document.getElementById("leave-type");
+            const leaveBalanceTable = document.getElementById("leave-balance-table");
+            const leaveForm = document.getElementById("leave-request-form");
+            const leaveHistory = document.getElementById("leave-history");
+            const searchButton = document.getElementById("search-button");
+            const resetButton = document.getElementById("reset-button");
+            const filterForm = document.getElementById("filter-form");
+
+            // Load employee information
+            fetch("/attendance/get-staff/")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        Swal.fire("ผิดพลาด", data.error, "error");
+                    } else {
+                        document.getElementById("employee-name").textContent = `${data.staff_fname} ${data.staff_lname}`;
+                        document.getElementById("employee-title").textContent = data.staff_title || "-";
+                        document.getElementById("employee-department").textContent = data.staff_department || "-";
+                        document.getElementById("employee-staff-code").textContent = data.staff_code || "-";
+                        document.getElementById("employee-branch").textContent = data.staff_brc || "-";
+                        document.getElementById("employee-date-of-start").textContent = data.date_of_start || "-";
+                    }
+                })
+                .catch(err => console.error("Error loading employee information:", err));
+
+            // Load leave types
+            fetch("/attendance/get-leave-types/")
+                .then(response => response.json())
+                .then(data => {
+                    leaveTypeSelect.innerHTML = "";
+                    data.forEach(type => {
+                        const option = document.createElement("option");
+                        option.value = type.id;
+                        option.textContent = type.th_name;
+                        leaveTypeSelect.appendChild(option);
+                    });
+                })
+                .catch(err => console.error("Error loading leave types:", err));
+
+            leaveBalanceTable.addEventListener("click", (event) => {
+                const row = event.target.closest(".clickable-row");
+                if (row && row.dataset.href) {
+                    window.location.href = row.dataset.href;
+                }
+            });
+
+            // Load leave balances
+            fetch("/attendance/get-leave-balances/")
+                .then(response => response.json())
+                .then(data => {
+                    leaveBalanceTable.innerHTML = "";
+                    data.forEach(balance => {
+                        const row = document.createElement("tr");
+                        row.className = "clickable-row";
+                        row.dataset.href = `/attendance/leave-requests-list/?leave_type=${balance.leave_type_id}`;
+                        row.innerHTML = `
+                            <td>${balance.leave_type}</td>
+                            <td>${Math.floor(balance.used_hours / 8)} วัน (${balance.used_hours} ชม.)</td>
+                            <td>${Math.floor(balance.remaining_hours / 8)} วัน (${balance.remaining_hours} ชม.)</td>
+                            <td>${Math.floor(balance.total_hours / 8)} วัน (${balance.total_hours} ชม.)</td>
+                        `;
+                        leaveBalanceTable.appendChild(row);
+                    });
+                })
+                .catch(err => console.error("Error loading leave balances:", err));
+
+            // ฟังก์ชันโหลดตัวเลือกประเภทการลาในส่วนค้นหา
+            function loadFilterLeaveTypes() {
+                fetch("/attendance/get-leave-types/")
+                    .then(response => response.json())
+                    .then(data => {
+                        const filterLeaveTypeSelect = document.getElementById("filter-leave-type");
+                        filterLeaveTypeSelect.innerHTML = '<option value="">ทั้งหมด</option>';
+                        data.forEach(type => {
+                            const option = document.createElement("option");
+                            option.value = type.id;
+                            option.textContent = type.th_name;
+                            filterLeaveTypeSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error("Error fetching leave types:", error));
+            }
+
+            // โหลดตัวเลือกประเภทการลาในส่วนกรอง
+            loadFilterLeaveTypes();
+
+            // Submit leave request
+            leaveForm.addEventListener("submit", e => {
+                e.preventDefault();
+
+                // รับค่าจาก input
+                const startDate = document.getElementById("start-date").value;
+                const startHour = document.getElementById("start-hour").value;
+                const startMinute = document.getElementById("start-minute").value;
+                const endDate = document.getElementById("end-date").value;
+                const endHour = document.getElementById("end-hour").value;
+                const endMinute = document.getElementById("end-minute").value;
+
+                // ตรวจสอบค่าที่กรอก
+                if (!startDate || !startHour || !startMinute || !endDate || !endHour || !endMinute) {
+                    alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+                    return;
+                }
+
+                // รวมวันที่ เวลา ชั่วโมง และนาที
+                const startDatetime = `${startDate}T${startHour.padStart(2, '0')}:${startMinute}`;
+                const endDatetime = `${endDate}T${endHour.padStart(2, '0')}:${endMinute}`;
+
+                const formData = new FormData(leaveForm);
+                formData.append("start_datetime", startDatetime);
+                formData.append("end_datetime", endDatetime);
+
+                // Show loading alert
+                Swal.fire({
+                    title: 'กำลังบันทึกข้อมูล...',
+                    text: 'กรุณารอสักครู่...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                fetch("/attendance/leave-request-auth/", {
+                    method: "POST",
+                    body: formData,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        Swal.fire("ผิดพลาด", data.error, "error");
+                    }
+                     else {
+                        Swal.fire("สำเร็จ", "บันทึกคำขออนุมัติเสร็จสิ้น", "success").then(() => {
+                            location.reload();
+                        });
+                    }
+                })
+                .catch(err => {
+                    Swal.fire("ผิดพลาด", "เกิดข้อผิดพลาดกรุณาลองใหม่อีกครั้ง", "error");
+                    console.error("ไม่สามารถบันทึกคำขออนุมัติได้ !:", err);
+                });
+            });
+        });
+    </script>
+{% endblock %}

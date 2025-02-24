@@ -1,0 +1,114 @@
+{% extends "general/base.html" %}
+
+{% block title %}รายการคำขออนุมัติ{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+<div class="container " style="width: 95%;">
+    <h1 class="text-center my-4">รายการคำขออนุมัติ</h1>
+    <!-- Search and Filter Form -->
+        <form id="filter-form" class="mb-4 row g-3">
+
+            <div class="col-md-3">
+                <label for="filter-status" class="form-label">สถานะ</label>
+                <select id="filter-status" name="status" class="form-select form-input">
+                    <option value="">ทั้งหมด</option>
+                    <option value="pending">รออนุมัติ</option>
+                    <option value="approved">อนุมัติ</option>
+                    <option value="rejected">ปฏิเสธ</option>
+                    <option value="cancelled">ยกเลิก</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="filter-leave-type" class="form-label">ประเภท</label>
+                <select id="filter-leave-type" name="leave_type" class="form-select form-input">
+                    <option value="">ทั้งหมด</option>
+                    {% for leave_type in leave_types %}
+                    <option value="{{ leave_type.id }}">{{ leave_type.th_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="filter-start-date" class="form-label">เริ่มวันที่</label>
+                <input type="date" id="filter-start-date" name="start_date" class="form-control form-input">
+            </div>
+            <div class="col-md-3">
+                <label for="filter-end-date" class="form-label">สิ้นสุดวันที่</label>
+                <input type="date" id="filter-end-date" name="end_date" class="form-control form-input">
+            </div>
+
+            <div class="col-md-12 text-start">
+                <button type="button" id="filter-button" class="btn btn-primary btn-sm">ค้นหา</button>
+                <button type="button" id="reset-button" class="btn btn-secondary btn-sm">ล้าง</button>
+            </div>
+        </form>
+    <hr>
+    {% if leave_requests %}
+      <div class="table-responsive">
+
+        <table class="table table-bordered table-hover" >
+            <thead class="table-light">
+
+            <tr>
+                <th scope="col">ประเภท</th>
+                <th scope="col">ช่วงเวลา</th>
+                <th scope="col">จำนวน</th>
+                <th scope="col">ผู้อนุมัติ</th>
+                 <th scope="col">สถานะ</th>
+            </tr>
+            </thead>
+            <tbody>
+                {% for request in leave_requests %}
+                <tr class="clickable-row" data-href="/attendance/leave-request-detail/{{ request.id }}/">
+                    <td>{{ request.leave_type.th_name }}</td>
+                    <td>{{ request.start_datetime|date:"d/m/Y H:i" }} - {{ request.end_datetime|date:"d/m/Y H:i" }}</td>
+                    <td>{{ request.total_duration }}</td>
+                    <td>{{ request.approve_user.get_full_name }}</td>
+                    <td>
+                        <span class="badge {% if request.status == 'approved' %}bg-success
+                                        {% elif request.status == 'rejected' %}bg-danger
+                                        {% elif request.status == 'pending' %}bg-warning text-dark
+                                        {% else %}bg-secondary{% endif %}">
+                            {{ request.get_status_display }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+      </div>
+    {% else %}
+        <p class="text-center text-muted">กรุณาค้นหาคำขออนุมัติ !</p>
+    {% endif %}
+</div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    // Filter functionality
+    document.getElementById("filter-button").addEventListener("click", () => {
+        const status = document.getElementById("filter-status").value;
+        const leaveType = document.getElementById("filter-leave-type").value;
+        const startDate = document.getElementById("filter-start-date").value;
+        const endDate = document.getElementById("filter-end-date").value;
+
+        let url = `/attendance/leave-requests-list/?status=${status}&leave_type=${leaveType}&start_date=${startDate}&end_date=${endDate}`;
+        window.location.href = url;
+    });
+
+    document.getElementById("reset-button").addEventListener("click", () => {
+        document.getElementById("filter-form").reset();
+    });
+
+    // Make rows clickable
+    document.querySelectorAll(".clickable-row").forEach(row => {
+        row.addEventListener("click", function () {
+            window.location.href = this.dataset.href;
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends "general/base.html" %}
+{% block title %}อนุมัติคำขอเปลี่ยนกะ{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+<div class="container " style="width: 95%;">
+    <h4 class="text-center">อนุมัติคำขอเปลี่ยนกะ</h4>
+
+    <!-- Search & Filter Form -->
+    <form id="filter-form" class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label for="search" class="form-label">ค้นหาพนักงาน</label>
+            <input type="text" id="search" name="search" class="form-control form-input" placeholder="ชื่อ, นามสกุล, รหัสพนักงาน" value="{{ search_query }}">
+        </div>
+        <div class="col-md-3">
+            <label for="status" class="form-label">สถานะ</label>
+            <select id="status" name="status" class="form-select form-input">
+                <option value="">ทั้งหมด</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>รออนุมัติ</option>
+                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>อนุมัติ</option>
+                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>ปฏิเสธ</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="start_date" class="form-label">เริ่มวันที่</label>
+            <input type="date" id="start_date" name="start_date" class="form-control form-input" value="{{ start_date }}">
+        </div>
+        <div class="col-md-2">
+            <label for="end_date" class="form-label">สิ้นสุดวันที่</label>
+            <input type="date" id="end_date" name="end_date" class="form-control form-input" value="{{ end_date }}">
+        </div>
+        <div class="col-md-1 align-self-end">
+            <button type="submit" class="btn btn-sm btn-primary">ค้นหา</button>
+        </div>
+    </form>
+
+    <hr>
+
+    {% if schedules is not None %}
+        {% if schedules %}
+            <!-- ปุ่มพิจารณาหลายรายการ -->
+            <div class="mb-3">
+                <button id="approve-selected" class="btn btn-success btn-sm">อนุมัติที่เลือก</button>
+                <button id="reject-selected" class="btn btn-danger btn-sm">ปฏิเสธที่เลือก</button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mt-4">
+                    <thead class="table-light">
+                        <tr>
+                            <th><input type="checkbox" id="select-all"></th>
+                            <th>วันที่</th>
+                            <th>พนักงาน</th>
+                            <th>กะที่เลือก</th>
+                            <th>ประเภทวัน</th>
+                            <th>สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in schedules %}
+                        <tr>
+                            <td><input type="checkbox" class="select-shift" data-id="{{ schedule.id }}"></td>
+                            <td>{{ schedule.date | date:"d/m/Y" }}</td>
+                            <td>{{ schedule.user.first_name }} {{ schedule.user.last_name }}</td>
+                            <td>{{ schedule.shift.name }}</td>
+                            <td>{{ schedule.get_shift_day_display }}</td>
+                            <td>
+                                {% if schedule.status == "pending" %}
+                                    <span class="badge bg-warning text-dark">{{ schedule.get_status_display }}</span>
+                                {% elif schedule.status == "approved" %}
+                                    <span class="badge bg-success">{{ schedule.get_status_display }}</span>
+                                {% elif schedule.status == "rejected" %}
+                                    <span class="badge bg-danger">{{ schedule.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-center text-muted mt-4">ไม่พบคำขอเปลี่ยนกะที่ตรงกับเงื่อนไข</p>
+        {% endif %}
+    {% else %}
+            <p class="text-center text-muted mt-4">กรุณาค้นหาคำขออนุมัติ !</p>
+    {% endif %}
+</div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // เลือกทั้งหมด
+    document.getElementById("select-all").addEventListener("change", function() {
+        document.querySelectorAll(".select-shift").forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+
+    function processBatchApproval(action) {
+        let selected = [];
+        document.querySelectorAll(".select-shift:checked").forEach(checkbox => {
+            selected.push(checkbox.dataset.id);
+        });
+
+        if (selected.length === 0) {
+            alert("กรุณาเลือกคำขอที่ต้องการพิจารณา");
+            return;
+        }
+
+        if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการ ${action === "approve" ? "อนุมัติ" : "ปฏิเสธ"} คำขอที่เลือก?`)) {
+            fetch("/attendance/shift-schedule-batch-approve/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: JSON.stringify({ schedule_ids: selected, action: action })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert("เกิดข้อผิดพลาด: " + data.error);
+                } else {
+                    alert("อัปเดตสถานะสำเร็จแล้ว!");
+                    location.reload();
+                }
+            })
+            .catch(err => console.error("Error updating shift schedule:", err));
+        }
+    }
+
+    document.getElementById("approve-selected").addEventListener("click", () => processBatchApproval("approve"));
+    document.getElementById("reject-selected").addEventListener("click", () => processBatchApproval("reject"));
+});
+</script>
+{% endblock %}

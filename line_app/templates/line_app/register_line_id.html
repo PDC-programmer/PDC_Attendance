@@ -1,0 +1,144 @@
+{% extends "general/base.html" %}
+
+{% block title %}ลงทะเบียน{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center vh-100">
+    <div class="container text-center" style="width: 95%;">
+<!--        <div class="card text-center">-->
+<!--            <div class="card-header">-->
+                <h3>ลงทะเบียน</h3>
+<!--            </div>-->
+<!--            <div class="card-body">-->
+                <!-- Employee Code Input Form -->
+                <form class="mt-3">
+                    <div class="mb-3">
+                        <label for="staff-code" class="form-label">รหัสพนักงาน</label>
+                        <div class="row d-flex justify-content-center">
+                        <input type="text" class="form-control text-center" id="staff-code" placeholder="กรอกรหัสพนักงานของคุณ..." style="width: 50%;">
+                        <small class="form-text text-muted">กรุณากรอกรหัสพนักงานให้ครบ 5 หลัก ตัวอย่าง: 00001</small>
+                        </div>
+                    </div>
+                    <button type="button" id="submit-staff-code" class="btn btn-primary">ยืนยัน</button>
+                </form>
+<!--            </div>-->
+        </div>
+    </div>
+</body>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById("submit-staff-code").addEventListener("click", () => {
+            const staffCode = document.getElementById("staff-code").value;
+
+            if (!staffCode) {
+                Swal.fire({
+                    icon: 'ผิดพลาด',
+                    title: 'ข้อมูลไม่ครบถ้วน...',
+                    text: 'กรุณากรอกข้อมูลให้ครบถ้วน !',
+                });
+                return;
+            }
+
+            // Show loading alert
+            Swal.fire({
+                title: 'กำลังค้นหาข้อมูล...',
+                text: 'กรุณารอสักครู่...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // ดึงข้อมูลจากเซิร์ฟเวอร์
+            fetch(`/line/get-staff-info/${staffCode}/`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    Swal.fire({
+                        icon: 'ผิดพลาด',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: data.error,
+                    });
+                } else {
+                    // แสดงข้อมูลเพื่อยืนยัน
+                    Swal.fire({
+                        title: 'ยืนยันการลงทะเบียน',
+                        html: `
+                            <p><strong>ชื่อ:</strong> ${data.staff_fname} ${data.staff_lname}</p>
+                            <p><strong>ตำแหน่ง:</strong> ${data.staff_title}</p>
+                            <p><strong>แผนก:</strong> ${data.staff_department}</p>
+                            <p><strong>รหัสพนักงาน:</strong> ${data.staff_code}</p>
+                            <p><strong>สาขา:</strong> ${data.staff_brc}</p>
+                            <p><strong>วันที่เริ่มงาน:</strong> ${data.date_of_start}</p>
+                        `,
+                        showCancelButton: true,
+                        confirmButtonText: 'ยืนยัน',
+                        cancelButtonText: 'ยกเลิก',
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Show loading alert
+                            Swal.fire({
+                                title: 'กำลังบันทึกข้อมูล...',
+                                text: 'กรุณารอสักครู่...',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+                            // หากผู้ใช้ยืนยัน ส่งคำขอการลงทะเบียน
+                            fetch("/line/register-line-id/", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                    staffCode
+                                }),
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.error) {
+                                    Swal.fire({
+                                        icon: 'ผิดพลาด',
+                                        title: 'เกิดข้อผิดพลาด',
+                                        text: data.error,
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'สำเร็จ',
+                                        title: 'เสร็จสมบูรณ์',
+                                        text: 'ลงทะเบียนเสร็จสมบูรณ์ !',
+                                    }).then(function() {
+                                    window.location.href = "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-request-auth/";
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                Swal.fire({
+                                    icon: 'ผิดพลาด',
+                                    title: 'เกิดข้อผิดพลาด',
+                                    text: 'ไม่สามารถลงทะเบียนได้ !',
+                                });
+                                console.error("ผิดพลาด:", error);
+                            });
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'ผิดพลาด',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถดึงข้อมูลพนักงานได้ !',
+                });
+                console.error("ผิดพลาด:", error);
+            });
+        });
+    });
+</script>
+{% endblock %}
