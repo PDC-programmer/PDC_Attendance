@@ -13,6 +13,7 @@ def oho_chat_webhook(request):
             receiver = data.get('receiver', 'Unknown')
             message = data.get('message', '')
             message_type = data.get('type', 'received')  # ค่าจะเป็น 'sent' หรือ 'received'
+            print(data)
 
             # บันทึกข้อความลง Database
             ChatMessage.objects.create(
