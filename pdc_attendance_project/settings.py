@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'line_app',
     'general_app',
     'branch_app',
+    'ohochat_app',
 
     # allauth
     'django.contrib.sites',

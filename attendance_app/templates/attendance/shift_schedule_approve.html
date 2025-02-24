@@ -4,17 +4,17 @@
 {% block content %}
 <div class="d-flex justify-content-center align-items-center my-5">
 <div class="container " style="width: 95%;">
-    <h2 class="text-center">อนุมัติคำขอเปลี่ยนกะ</h2>
+    <h4 class="text-center">อนุมัติคำขอเปลี่ยนกะ</h4>
 
     <!-- Search & Filter Form -->
     <form id="filter-form" class="row g-3 mb-3">
         <div class="col-md-4">
             <label for="search" class="form-label">ค้นหาพนักงาน</label>
-            <input type="text" id="search" name="search" class="form-control" placeholder="ชื่อ, นามสกุล, รหัสพนักงาน" value="{{ search_query }}">
+            <input type="text" id="search" name="search" class="form-control form-input" placeholder="ชื่อ, นามสกุล, รหัสพนักงาน" value="{{ search_query }}">
         </div>
         <div class="col-md-3">
             <label for="status" class="form-label">สถานะ</label>
-            <select id="status" name="status" class="form-select">
+            <select id="status" name="status" class="form-select form-input">
                 <option value="">ทั้งหมด</option>
                 <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>รออนุมัติ</option>
                 <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>อนุมัติ</option>
@@ -23,14 +23,14 @@
         </div>
         <div class="col-md-2">
             <label for="start_date" class="form-label">เริ่มวันที่</label>
-            <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date }}">
+            <input type="date" id="start_date" name="start_date" class="form-control form-input" value="{{ start_date }}">
         </div>
         <div class="col-md-2">
             <label for="end_date" class="form-label">สิ้นสุดวันที่</label>
-            <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date }}">
+            <input type="date" id="end_date" name="end_date" class="form-control form-input" value="{{ end_date }}">
         </div>
         <div class="col-md-1 align-self-end">
-            <button type="submit" class="btn btn-primary">ค้นหา</button>
+            <button type="submit" class="btn btn-sm btn-primary">ค้นหา</button>
         </div>
     </form>
 
