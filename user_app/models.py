@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Group
 from django.db import models
 from branch_app.models import BsnBranch
 import os
@@ -53,6 +53,12 @@ class BsnStaff(models.Model):
                                       blank=True,
                                       null=True
                                       )
+    group = models.ForeignKey(Group,
+                              on_delete=models.DO_NOTHING,
+                              related_name="group",
+                              blank=True,
+                              null=True,
+                              )
 
     class Meta:
         db_table = 'bsn_staff'

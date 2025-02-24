@@ -3,25 +3,221 @@
 {% block title %}หน้าแรก{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-center align-items-center vh-100">
-<div class="container " style="width: 95%;">
+
+<div class="d-flex justify-content-center align-items-center my-5">
+<div class="container" style="width: 95%;">
     <h1 class="text-center ">โปรแกรมจัดการเวลางาน</h1>
-    <hr>
-    <p>โปรแกรมจัดการเวลางาน ที่ทำงานร่วมกับ Line ที่สามารถ: </p>
-    <p>
-        <svg xmlns="http://www.w3.org/2000/svg" height="20" width="17.5" viewBox="0 0 448 512"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#00e02d" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>
-        ตรวจสอบสิทธิ์
-    </p>
-    <p>
-        <svg xmlns="http://www.w3.org/2000/svg" height="20" width="17.5" viewBox="0 0 448 512"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#00e02d" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>
-        ส่งคำขออนุมัติ
-    </p>
-    <p>
-        <svg xmlns="http://www.w3.org/2000/svg" height="20" width="17.5" viewBox="0 0 448 512"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#00e02d" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>
-        พิจารณาคำขออนุมัติ
-    </p>
 
+    <div class="row justify-content-evenly ">
+        <div class="card col-5 text-center shadow">
+            <div class="card-body">
+                <a href="/attendance/leave-requests-list/?status=pending&leave_type=&start_date=&end_date=" class="btn">
+                    <div class="card-title my-2">
+                        <h6 >รายการคำขอ</h6>
+                    </div>
+                    <p>
+                        <h6 id="requester-pending">กำลังโหลด...</h6>
+                    </p>
+                </a>
+            </div>
+        </div>
+        {% for item in user.groups.all %}
+        {% if item.id == 3 %}
 
+        <div class="card col-5 text-center shadow">
+            <div class="card-body">
+                <a href="/attendance/leave-requests-approval/?status=pending&user=&leave_type=&start_date=&end_date=" class="btn btn-sm position-relative">
+                    <div class="card-title my-2">
+                        <h6>รายการอนุมัติ</h6>
+                    </div>
+                    <p>
+                        <h6 id="approver-pending">กำลังโหลด...</h6>
+                    </p>
+                </a>
+            </div>
+        </div>
+
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Leave Request Filters -->
+    <div class="mb-4">
+        <h4 class="text-center">ค้นหาคำขออนุมัติ</h4>
+        <form id="filter-form" class="mb-4 row g-3">
+            <div class="col-md-5">
+                <label for="filter-start-date" class="form-label">วันที่เวลา</label>
+                <input type="date" id="filter-start-date" class="form-control form-input">
+            </div>
+            <div class="col-md-5">
+                <label for="filter-leave-type" class="form-label ">ประเภทการลา</label>
+                <select id="filter-leave-type" class="form-select form-input">
+                    <option value="">ทั้งหมด</option>
+                </select>
+            </div>
+            <div class="col-md-2 align-self-end">
+                <button type="button" id="search-button" class="btn btn-primary btn-sm" style="width: 25%;">ค้นหา</button>
+                <button type="button" id="reset-button" class="btn btn-secondary btn-sm" style="width: 25%;">ล้าง</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Leave History -->
+    <h4 class="text-center">ประวัติคำขออนุมัติ</h4>
+    <div id="leave-history" class="d-flex flex-column">
+        <div class="card">
+            <p class="text-center text-muted my-2">กรุณาค้นหาเพื่อดูข้อมูล !</p>
+        </div>
+    </div>
 </div>
 </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const leaveTypeSelect = document.getElementById("leave-type");
+            const leaveBalanceTable = document.getElementById("leave-balance-table");
+            const leaveForm = document.getElementById("leave-request-form");
+            const leaveHistory = document.getElementById("leave-history");
+            const searchButton = document.getElementById("search-button");
+            const resetButton = document.getElementById("reset-button");
+            const filterForm = document.getElementById("filter-form");
+
+            // Load employee information
+            fetch("/get-pending-leave-attendances/")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        Swal.fire("ผิดพลาด", data.error, "error");
+                    } else {
+                        document.getElementById("requester-pending").textContent = data.requester_pending;
+                        document.getElementById("approver-pending").textContent = data.approver_pending;
+                    }
+                })
+                .catch(err => console.error("Error loading employee information:", err));
+
+            // Load leave types
+            fetch("/attendance/get-leave-types/")
+                .then(response => response.json())
+                .then(data => {
+                    leaveTypeSelect.innerHTML = "";
+                    data.forEach(type => {
+                        const option = document.createElement("option");
+                        option.value = type.id;
+                        option.textContent = type.th_name;
+                        leaveTypeSelect.appendChild(option);
+                    });
+                })
+                .catch(err => console.error("Error loading leave types:", err));
+
+            // ฟังก์ชันโหลดตัวเลือกประเภทการลาในส่วนค้นหา
+            function loadFilterLeaveTypes() {
+                fetch("/attendance/get-leave-types/")
+                    .then(response => response.json())
+                    .then(data => {
+                        const filterLeaveTypeSelect = document.getElementById("filter-leave-type");
+                        filterLeaveTypeSelect.innerHTML = '<option value="">ทั้งหมด</option>';
+                        data.forEach(type => {
+                            const option = document.createElement("option");
+                            option.value = type.id;
+                            option.textContent = type.th_name;
+                            filterLeaveTypeSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error("Error fetching leave types:", error));
+            }
+
+            function formatDateTime(dateString) {
+                const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit', hourCycle: 'h23' };
+                const formattedDate = new Intl.DateTimeFormat('en-EN', options).format(new Date(dateString));
+                return formattedDate.replace(',', ''); // ลบลูกน้ำระหว่างวันที่กับเวลา
+            }
+
+            // Search and filter leave history
+            searchButton.addEventListener("click", () => {
+                const startDate = document.getElementById("filter-start-date").value;
+                const leaveType = document.getElementById("filter-leave-type").value;
+
+                // Show loading alert
+                Swal.fire({
+                    title: 'กำลังค้นหาข้อมูล...',
+                    text: 'กรุณารอสักครู่...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                let url = "/attendance/get-leave-attendances/?";
+                if (startDate) url += `start_datetime=${startDate}&`;
+                if (leaveType) url += `leave_type=${leaveType}`;
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        leaveHistory.innerHTML = "";
+                        if (data.length > 0) {
+                            data.forEach(request => {
+                                const card = document.createElement("div");
+                                card.className = "card";
+                                card.innerHTML = `
+                                    <div class="card-body">
+                                        <h4 class="card-title my-2">รหัสคำขออนุมัติ: ${request.id}</h4>
+                                        <p class="card-text">ประเภท: ${request.leave_type}</p>
+                                        <p class="card-text">ช่วงเวลา: ${formatDateTime(request.start_datetime)} - ${formatDateTime(request.end_datetime)}</p>
+                                        <p class="card-text">เหตุผล: ${request.reason}</p>
+                                        <p class="card-text">ผู้อนุมัติ: ${request.approve_user}</p>
+                                        <p class="card-text">
+                                            สถานะ: <span class="badge ${getStatusBadge(request.status)}">${request.status}</span>
+                                        </p>
+                                        <a href="/attendance/leave-request-detail/${request.id}/" class="btn btn-sm btn-secondary">ดูรายละเอียด</a>
+                                    </div>
+                                `;
+                                leaveHistory.appendChild(card);
+                            });
+                        } else {
+                            leaveHistory.innerHTML = `<p class="text-center text-muted">ไม่พบข้อมูลคำขอการลาตามเงื่อนไข</p>`;
+                        }
+                        Swal.close(); // Close loading alert
+                    })
+                    .catch(err => console.error("Error filtering leave history:", err));
+            });
+
+            // Reset filters
+            resetButton.addEventListener("click", () => {
+                filterForm.reset();
+                leaveHistory.innerHTML = `<p class="text-center text-muted">กรุณาค้นหาเพื่อดูข้อมูล</p>`;
+            });
+
+            // โหลดตัวเลือกประเภทการลาในส่วนกรอง
+            loadFilterLeaveTypes();
+
+            // Helper function for status badge
+            function getStatusBadge(status) {
+                switch (status.toLowerCase()) {
+                    case "อนุมัติ":
+                        return "bg-success";
+                    case "รออนุมัติ":
+                        return "bg-warning text-dark";
+                    case "ปฏิเสธ":
+                        return "bg-danger";
+                    default:
+                        return "bg-secondary";
+                }
+            }
+
+            // ฟังก์ชันแปลงวันที่ให้เป็น ISO Format
+            function convertToISOFormat(dateString) {
+                const [day, month, year, time] = dateString.split(/[/\s:]/);
+                let formattedDate = `${year}-${month}-${day}T${time}`;
+
+                // ตรวจสอบว่าไม่มีนาที ให้เพิ่ม :00
+                if (!formattedDate.includes(":")) {
+                    formattedDate += ":00";
+                }
+
+                return formattedDate;
+            }
+
+        });
+    </script>
 {% endblock %}
+

@@ -1,0 +1,81 @@
+{% extends "general/base.html" %}
+
+{% block title %}อัปเดตตารางกะ{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+    <div class="container " style="width: 95%;">
+        <h1 class="text-center">เปลี่ยนตารางกะของคุณ</h1>
+        <hr>
+
+        <form id="shift-form" method="POST">
+            {% csrf_token %}
+            <div class="row ">
+                <div class="col-md-4 my-4">
+                    <label>เลือกเดือน</label>
+                    <select id="month-select" name="month" class="form-select form-input">
+                        {% for month_num in months %}
+                        <option value="{{ month_num }}">{{ month_num }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 my-4">
+                    <label>เลือกปี</label>
+                    <select id="year-select" name="year" class="form-select form-input">
+                        {% for year in years %}
+                        <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 my-4">
+                    <label>เลือกกะทำงาน</label>
+                    <select id="shift-select" name="shift" class="form-select form-input">
+                        {% for shift in shifts %}
+                        <option value="{{ shift.id }}">{{ shift.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="text-start mt-4">
+                <button type="submit" class="btn btn-primary">บันทึก</button>
+            </div>
+        </form>
+
+
+        <div id="response-message" class="text-center"></div>
+    </div>
+</div>
+
+<script>
+document.getElementById("shift-form").addEventListener("submit", function(event) {
+    event.preventDefault();
+    const formData = new FormData(this);
+
+    // Show loading alert
+    Swal.fire({
+        title: 'กำลังบันทึกข้อมูล...',
+        text: 'กรุณารอสักครู่...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    fetch("{% url 'shift_schedule_update' %}", {
+        method: "POST",
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            Swal.fire("ผิดพลาด", data.error, "error");
+        }
+         else {
+            Swal.fire("สำเร็จ", "บันทึกเวลาทำงานสร็จสิ้น !", "success").then(() => {
+                location.reload();
+            });
+        }
+    })
+});
+</script>
+{% endblock %}

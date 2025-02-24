@@ -5,8 +5,6 @@
 {% block content %}
 <div class="d-flex justify-content-center align-items-center my-5">
 <div class="container " style="width: 95%;">
-        <h1 class="text-center">คำขออนุมัติการลาของคุณ</h1>
-
         <!-- Employee Information -->
         <div class="card">
             <h4 class="text-center">ข้อมูลพนักงาน</h4>
@@ -21,6 +19,7 @@
 
         <!-- Leave Balances -->
         <h4 class="text-center">สิทธิ์คงเหลือ</h4>
+        <div class="table-responsive">
         <table class="table table-bordered table-hover ">
             <thead class="table-light">
                 <tr>
@@ -38,6 +37,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
         <hr>
         <!-- Leave Request Form -->
 
@@ -46,11 +46,11 @@
             <div class="row g-3">
                 <div class="mb-3 col-md-6">
                     <label for="start-date" class="form-label">เริ่มวันที่/เวลา</label>
-                    <input type="date" id="start-date" name="start_date" class="form-control" required>
+                    <input type="date" id="start-date" name="start_date" class="form-control form-input" required>
                 </div>
                 <div class="mb-3 col-md-3">
                     <label for="start-hour" class="form-label">ชั่วโมง</label>
-                    <select id="start-hour" name="start_hour" class="form-select" required>
+                    <select id="start-hour" name="start_hour" class="form-select form-input" required>
                         <!-- ชั่วโมงระหว่าง 07-21 -->
                         {% for hour in hours_range %}
                         <option value="{{ hour }}">{{ hour }}</option>
@@ -59,7 +59,7 @@
                 </div>
                 <div class="mb-3 col-md-3">
                     <label for="start-minute" class="form-label">นาที</label>
-                    <select id="start-minute" name="start_minute" class="form-select" required>
+                    <select id="start-minute" name="start_minute" class="form-select form-input" required>
                         <option value="00">00</option>
                         <option value="30">30</option>
                     </select>
@@ -68,11 +68,11 @@
             <div class="row g-3">
                 <div class="mb-3 col-md-6">
                     <label for="end-date" class="form-label">ถึงวันที่/เวลา</label>
-                    <input type="date" id="end-date" name="end_date" class="form-control" required>
+                    <input type="date" id="end-date" name="end_date" class="form-control form-input" required>
                 </div>
                 <div class="mb-3 col-md-3">
                     <label for="end-hour" class="form-label">ชั่วโมง</label>
-                    <select id="end-hour" name="end_hour" class="form-select"  required>
+                    <select id="end-hour" name="end_hour" class="form-select form-input"  required>
                         {% for hour in hours_range %}
                         <option value="{{ hour }}" {% if hour == 18 %}selected{% endif %}>{{ hour }}</option>
                         {% endfor %}
@@ -80,7 +80,7 @@
                 </div>
                 <div class="mb-3 col-md-3">
                     <label for="end-minute" class="form-label">นาที</label>
-                    <select id="end-minute" name="end_minute" class="form-select" required>
+                    <select id="end-minute" name="end_minute" class="form-select form-input" required>
                         <option value="00">00</option>
                         <option value="30">30</option>
                     </select>
@@ -88,52 +88,20 @@
             </div>
             <div class="mb-3">
                 <label for="leave-type" class="form-label">ประเภทการลา</label>
-                <select class="form-select" id="leave-type" name="type" required>
+                <select class="form-select form-input" id="leave-type" name="type" required>
                     <option value="">Loading...</option>
                 </select>
             </div>
             <div class="mb-3">
                 <label for="reason" class="form-label">เหตุผล</label>
-                <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                <textarea class="form-control form-input" id="reason" name="reason" rows="3" required></textarea>
             </div>
             <div class="mb-3">
                 <label for="leave-image" class="form-label">รูปภาพ</label>
-                <input type="file" class="form-control" id="leave-image" name="image" accept="image/*">
+                <input type="file" class="form-control form-input" id="leave-image" name="image" accept="image/*">
             </div>
             <button type="submit" class="btn btn-primary btn-sm" style="width: 25%;">ยืนยัน</button>
         </form>
-        <hr>
-
-
-        <!-- Leave Request Filters -->
-        <div class="mb-4">
-            <h4 class="text-center">ค้นหาและกรองคำขออนุมัติ</h4>
-            <form id="filter-form">
-                <div class="mb-3">
-                    <label for="filter-start-date" class="form-label">วันที่เวลา</label>
-                    <input type="datetime-local" id="filter-start-date" class="form-control" step="1800">
-                </div>
-                <div class="mb-3">
-                    <label for="filter-leave-type" class="form-label">ประเภทการลา</label>
-                    <select id="filter-leave-type" class="form-select">
-                        <option value="">ทั้งหมด</option>
-                    </select>
-                </div>
-<!--                <div class="d-flex justify-content-between gap-2">-->
-                    <button type="button" id="search-button" class="btn btn-primary btn-sm" style="width: 25%;">ค้นหา</button>
-                    <button type="button" id="reset-button" class="btn btn-secondary btn-sm" style="width: 25%;">ล้าง</button>
-<!--                    <button type="button" id="asd-button" class="btn btn-secondary w-50">ล้าง</button>-->
-<!--                </div>-->
-            </form>
-        </div>
-
-        <!-- Leave History -->
-        <h4 class="text-center">ประวัติคำขออนุมัติ</h4>
-        <div id="leave-history" class="d-flex flex-column">
-            <div class="card">
-                <p class="text-center text-muted my-2">กรุณาค้นหาเพื่อดูข้อมูล !</p>
-            </div>
-        </div>
 
     </div>
 </div>
@@ -147,42 +115,6 @@
             const searchButton = document.getElementById("search-button");
             const resetButton = document.getElementById("reset-button");
             const filterForm = document.getElementById("filter-form");
-<!--            const startDatetimeInput = document.getElementById("start-datetime");-->
-<!--            const endDatetimeInput = document.getElementById("end-datetime");-->
-
-<!--            flatpickr("#start-datetime", {-->
-<!--                enableTime: true,-->
-<!--                dateFormat: "d/m/Y H:i",-->
-<!--                time_24hr: true,-->
-<!--                minuteIncrement: 30,-->
-<!--            });-->
-
-<!--            flatpickr("#end-datetime", {-->
-<!--                enableTime: true,-->
-<!--                dateFormat: "d/m/Y H:i",-->
-<!--                time_24hr: true,-->
-<!--                minuteIncrement: 30,-->
-<!--            });-->
-
-<!--            flatpickr("#filter-start-date", {-->
-<!--                enableTime: true,-->
-<!--                dateFormat: "d/m/Y H:i",-->
-<!--                time_24hr: true,-->
-<!--                minuteIncrement: 30,-->
-<!--            });-->
-
-<!--            function validateInterval(input) {-->
-<!--                const datetime = new Date(input.value);-->
-<!--                const minutes = datetime.getMinutes();-->
-<!--                if (minutes !== 0 && minutes !== 30) {-->
-<!--                    Swal.fire(-->
-<!--                        "Invalid Time",-->
-<!--                        "โปรดเลือกเวลาที่ลงท้ายด้วย 00 หรือ 30 นาทีเท่านั้น",-->
-<!--                        "error"-->
-<!--                    );-->
-<!--                    input.value = ""; // Clear invalid value-->
-<!--                }-->
-<!--            }-->
 
             // Load employee information
             fetch("/attendance/get-staff/")
@@ -222,7 +154,6 @@
                 }
             });
 
-
             // Load leave balances
             fetch("/attendance/get-leave-balances/")
                 .then(response => response.json())
@@ -260,84 +191,8 @@
                     .catch(error => console.error("Error fetching leave types:", error));
             }
 
-            function formatDateTime(dateString) {
-                const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit', hourCycle: 'h23' };
-                const formattedDate = new Intl.DateTimeFormat('en-EN', options).format(new Date(dateString));
-                return formattedDate.replace(',', ''); // ลบลูกน้ำระหว่างวันที่กับเวลา
-            }
-
-            // Search and filter leave history
-            searchButton.addEventListener("click", () => {
-                const startDate = document.getElementById("filter-start-date").value;
-                const leaveType = document.getElementById("filter-leave-type").value;
-
-                // Show loading alert
-                Swal.fire({
-                    title: 'กำลังค้นหาข้อมูล...',
-                    text: 'กรุณารอสักครู่...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                let url = "/attendance/get-leave-attendances/?";
-                if (startDate) url += `start_datetime=${startDate}&`;
-                if (leaveType) url += `leave_type=${leaveType}`;
-
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        leaveHistory.innerHTML = "";
-                        if (data.length > 0) {
-                            data.forEach(request => {
-                                const card = document.createElement("div");
-                                card.className = "card";
-                                card.innerHTML = `
-                                    <div class="card-body">
-                                        <h4 class="card-title my-2">รหัสคำขออนุมัติ: ${request.id}</h4>
-                                        <p class="card-text">ประเภท: ${request.leave_type}</p>
-                                        <p class="card-text">ช่วงเวลา: ${formatDateTime(request.start_datetime)} - ${formatDateTime(request.end_datetime)}</p>
-                                        <p class="card-text">เหตุผล: ${request.reason}</p>
-                                        <p class="card-text">ผู้อนุมัติ: ${request.approve_user}</p>
-                                        <p class="card-text">
-                                            สถานะ: <span class="badge ${getStatusBadge(request.status)}">${request.status}</span>
-                                        </p>
-                                        <a href="/attendance/leave-request-detail/${request.id}/" class="btn btn-sm btn-secondary">ดูรายละเอียด</a>
-                                    </div>
-                                `;
-                                leaveHistory.appendChild(card);
-                            });
-                        } else {
-                            leaveHistory.innerHTML = `<p class="text-center text-muted">ไม่พบข้อมูลคำขอการลาตามเงื่อนไข</p>`;
-                        }
-                        Swal.close(); // Close loading alert
-                    })
-                    .catch(err => console.error("Error filtering leave history:", err));
-            });
-
-            // Reset filters
-            resetButton.addEventListener("click", () => {
-                filterForm.reset();
-                leaveHistory.innerHTML = `<p class="text-center text-muted">กรุณาค้นหาเพื่อดูข้อมูล</p>`;
-            });
-
             // โหลดตัวเลือกประเภทการลาในส่วนกรอง
             loadFilterLeaveTypes();
-
-            // Helper function for status badge
-            function getStatusBadge(status) {
-                switch (status.toLowerCase()) {
-                    case "อนุมัติ":
-                        return "bg-success";
-                    case "รออนุมัติ":
-                        return "bg-warning text-dark";
-                    case "ปฏิเสธ":
-                        return "bg-danger";
-                    default:
-                        return "bg-secondary";
-                }
-            }
 
             // Submit leave request
             leaveForm.addEventListener("submit", e => {
@@ -361,20 +216,9 @@
                 const startDatetime = `${startDate}T${startHour.padStart(2, '0')}:${startMinute}`;
                 const endDatetime = `${endDate}T${endHour.padStart(2, '0')}:${endMinute}`;
 
-<!--                // รวมวันที่และเวลาสำหรับการส่งไปยังเซิร์ฟเวอร์-->
-<!--                const startDatetime = `${startDate}T${startHour.padStart(2, '0')}:00`;-->
-<!--                const endDatetime = `${endDate}T${endHour.padStart(2, '0')}:00`;-->
-
                 const formData = new FormData(leaveForm);
                 formData.append("start_datetime", startDatetime);
                 formData.append("end_datetime", endDatetime);
-
-<!--                // แปลงรูปแบบวันที่ให้เป็น '%Y-%m-%dT%H:%M'-->
-<!--                const startDatetime = formData.get("start_datetime");-->
-<!--                const endDatetime = formData.get("end_datetime");-->
-
-<!--                formData.set("start_datetime", convertToISOFormat(startDatetime));-->
-<!--                formData.set("end_datetime", convertToISOFormat(endDatetime));-->
 
                 // Show loading alert
                 Swal.fire({
@@ -406,20 +250,6 @@
                     console.error("ไม่สามารถบันทึกคำขออนุมัติได้ !:", err);
                 });
             });
-            // ฟังก์ชันแปลงวันที่ให้เป็น ISO Format
-            function convertToISOFormat(dateString) {
-                const [day, month, year, time] = dateString.split(/[/\s:]/);
-                let formattedDate = `${year}-${month}-${day}T${time}`;
-
-                // ตรวจสอบว่าไม่มีนาที ให้เพิ่ม :00
-                if (!formattedDate.includes(":")) {
-                    formattedDate += ":00";
-                }
-
-                return formattedDate;
-            }
-<!--            startDatetimeInput.addEventListener("blur", () => validateInterval(startDatetimeInput));-->
-<!--            endDatetimeInput.addEventListener("blur", () => validateInterval(endDatetimeInput));-->
         });
     </script>
 {% endblock %}

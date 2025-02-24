@@ -10,114 +10,235 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <style>
+        /* General Styles */
         body {
             background-color: #f2f2f2;
             font-family: Arial, sans-serif;
             color: #333;
+            margin: 0;
+            padding: 0;
         }
+
+        /* Navbar */
         .navbar {
             background-color: #f8f9fa;
         }
+
         .navbar-brand, .nav-link {
             color: #03257e !important;
         }
+
         .nav-link:hover {
             color: #1944b5 !important;
         }
+
+        /* Main Container */
         .container {
-            max-width: 600px;
+            max-width: 100%;
+            width: 95%;
             margin: 20px auto;
             background: #fff;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        h1, h4 {
+
+        /* Headings */
+        h1 {
             font-size: 1.2rem;
-            margin-top: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            color: #1944b5;
+            text-align: center;
+        }
+
+        h4 {
+            font-size: 1rem;
+            margin-bottom: 15px;
             color: #1944b5;
         }
+
+        h6 {
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            color: #1944b5;
+        }
+
+        /* Cards */
         .card {
             border: none;
             background-color: #f8f9fa;
             margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
         }
+
         .card img {
             max-width: 100%;
             border-radius: 8px;
         }
-        .badge {
-            font-size: 0.5rem;
+
+        /* Tables */
+        .table-responsive {
+            overflow-x: auto;
         }
-        .btn {
-            font-size: 1rem;
-        }
-        .form-label {
-            font-weight: bold;
-        }
-        .btn-sm {
-            font-size: 0.7rem; /* Smaller text for buttons */
-            padding: 4px 8px;   /* Adjust padding for smaller size */
-        }
-        .table th, .table td {
-        font-size: 0.5rem; /* Adjust font size */
-        }
+
         .table {
+            width: 100%;
             border-collapse: separate;
             border-spacing: 0;
             border-radius: 10px;
-            overflow: hidden;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        .table th:first-child {
-            border-top-left-radius: 10px;
+        .table th, .table td {
+            font-size: 0.9rem;
+            padding: 8px;
+            text-align: center;
+            white-space: nowrap; /* Prevents text wrapping */
         }
 
-        .table th:last-child {
-            border-top-right-radius: 10px;
+        tr:first-child th:first-child {
+          border-top-left-radius: 10px;
+        }
+        tr:first-child th:last-child {
+          border-top-right-radius: 10px;
+        }
+        tr:last-child td:first-child {
+          border-bottom-left-radius: 10px;
+        }
+        tr:last-child td:last-child {
+          border-bottom-right-radius: 10px;
         }
 
-        .table td:first-child:last-child {
-            border-bottom-left-radius: 10px;
-        }
         .clickable-row {
             cursor: pointer;
         }
+
         .clickable-row:hover {
             background-color: #f1f1f1;
         }
-        .sidebar {
-            width: 200px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            background-color: #03257e;
-            color: white;
-            padding-top: 64px;
 
+        /* Buttons */
+        .btn {
+            font-size: 1rem;
+            padding: 10px 12px;
         }
-        .sidebar a {
-            padding: 10px 15px;
-            display: block;
-            color: white;
-            text-decoration: none;
+
+        .btn-sm {
+            font-size: 0.85rem;
+            padding: 6px 10px;
         }
-        .sidebar a:hover {
-            background-color: #1944b5;
+
+        /* Forms */
+        .form-label {
+            font-weight: bold;
+            font-size: 0.9rem;
         }
-        .content {
-            margin-left: 220px; /* เพื่อเว้นที่ให้กับ sidebar */
-            padding: 20px;
+
+        .form-input {
+            font-size: 0.9rem;
         }
+
+        /* Flexbox Adjustments */
+        .d-flex {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.1rem;
+            }
+
+            h4 {
+                font-size: 0.95rem;
+            }
+
+            h6 {
+                font-size: 0.8rem;
+            }
+
+            .table th, .table td {
+                font-size: 0.75rem;
+                padding: 5px;
+            }
+
+            .btn {
+                font-size: 0.9rem;
+                padding: 8px 10px;
+            }
+
+            .btn-sm {
+                font-size: 0.8rem;
+                padding: 5px 8px;
+            }
+
+            .form-label {
+                font-size: 0.85rem;
+            }
+
+            .form-input {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Small Mobile (up to 480px) */
+        @media (max-width: 480px) {
+            .container {
+                width: 100%;
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 1rem;
+            }
+
+            h4 {
+                font-size: 0.85rem;
+            }
+
+            h6 {
+                font-size: 0.75rem;
+            }
+
+            .table th, .table td {
+                font-size: 0.7rem;
+                padding: 4px;
+            }
+
+            .btn {
+                font-size: 0.85rem;
+                padding: 6px 8px;
+            }
+
+            .btn-sm {
+                font-size: 0.75rem;
+                padding: 4px 6px;
+            }
+
+            .form-label {
+                font-size: 0.8rem;
+            }
+
+            .form-input {
+                font-size: 0.8rem;
+            }
+        }
+
     </style>
 </head>
 <body>
 
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top mb-5">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">
                 <img src="{% static 'images/logo.png' %}" alt="Logo" width="44" height="38">
@@ -143,12 +264,37 @@
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="managementDropdown">
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'leave_attendance_list' %}">การลาของพนักงาน</a>
+                                    <a class="btn btn-sm position-relative mx-3" href="{% url 'leave_attendance_list' %}">ลางาน</a>
                                 </li>
 
                             </ul>
                         </li>
                         {% endif %}
+
+                        {% for item in user.groups.all %}
+                        {% if item.id == 3 %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown" href="#" id="ApprovalDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                รายการอนุมัติ
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="ApprovalDropdown">
+
+                                <li>
+                                    <a  class="btn btn-sm position-relative mx-3" href="/attendance/leave-requests-approval/">ลางาน
+<!--                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger" id="approver-pending">กำลังโหลด...<span class="visually-hidden">unread messages</span></span>-->
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a  class="btn btn-sm position-relative mx-3" href="/attendance/shift-schedule-approve/">เปลี่ยนเวลางาน
+<!--                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger" id="approver-pending">กำลังโหลด...<span class="visually-hidden">unread messages</span></span>-->
+                                    </a>
+                                </li>
+
+                            </ul>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
 
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -156,18 +302,26 @@
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="userDropdown">
                                 <li>
-                                    <a class="dropdown-item" href="/attendance/leave-request-auth/">ขอลางาน</a>
+                                    <a class="btn btn-sm position-relative mx-3" href="/attendance/leave-request-auth/">ลางาน</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="/attendance/leave-requests-list/">รายการคำขอ</a>
+                                    <a class="btn btn-sm position-relative mx-3" href="/attendance/shift-schedule-update/">เลือกเวลาทำงาน</a>
                                 </li>
-                                {% if user.role == "Manager" %}
                                 <li>
-                                    <a class="dropdown-item" href="/attendance/leave-requests-approval/">รายการอนุมัติ</a>
+                                    <a class="btn btn-sm position-relative mx-3" href="/attendance/shift-schedule-view/">เปลี่ยนเวลาทำงาน</a>
                                 </li>
-                                {% endif %}
+                                <li>
+                                    <a class="btn btn-sm position-relative mx-3" href="/attendance/leave-requests-list/">รายการคำขอ
+<!--                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger" id="requester-pending">กำลังโหลด...<span class="visually-hidden">unread messages</span></span>-->
+                                    </a>
+                                </li>
+<!--                                {% if user.role == "Manager" %}-->
+<!--                                <li>-->
+<!--                                    <a class="dropdown-item" href="/attendance/leave-requests-approval/">รายการอนุมัติ</a>-->
+<!--                                </li>-->
+<!--                                {% endif %}-->
+                                <li><a class=" position-relative" href="/accounts/logout/"><button class="btn btn-danger btn-sm mx-3">ออกจากระบบ</button></a></li>
 
-                                <li><a class="dropdown-item" href="/accounts/logout/">ออกจากระบบ</a></li>
                             </ul>
                         </li>
                     {% else %}
