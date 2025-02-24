@@ -51,12 +51,17 @@ def register_line_id(request):
                     return JsonResponse({"error": "รหัสพนักงานถูกใช้ลงทะเบียนไปแล้ว !"},
                                         status=400)
 
+            group = 3 if get_staff_name.staff_type == "Manager" else 5
+
             # อัปเดตข้อมูล User
             user = request.user
             user.first_name = get_staff_name.staff_fname
             user.last_name = get_staff_name.staff_lname
             user.username = get_staff_name.staff_code
-            user.role = get_staff_name.staff_type
+            # user.role = get_staff_name.staff_type
+            # user.groups.add(get_staff_name.staff_type)
+            user.groups.add(get_staff_name.group)
+            user.groups.add(group)
             user.save()
 
             # ค้นหา LeaveBalanceInitial ตาม staff_code
@@ -129,7 +134,6 @@ def get_staff_info(request, staff_code):
         "staff_brc": staff.brc_id.brc_sname,
         "date_of_start": date_of_start_formatted,
     }, status=200)
-
 
 
 def user_info(request):

@@ -1,6 +1,6 @@
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from .models import LeaveAttendance, LeaveBalance
+from .models import LeaveAttendance, LeaveBalance, ShiftSchedule
 from datetime import datetime
 from attendance_app.utils import calculate_working_hours  # Import the utility function
 
@@ -24,11 +24,10 @@ def update_leave_balance(sender, instance, **kwargs):
     """
     ปรับปรุง LeaveBalance ตามสถานะใหม่
     """
-
     # num_days = (datetime.strptime(str(instance.end_date), "%Y-%m-%d") - datetime.strptime(str(instance.start_date), "%Y-%m-%d")).days + 1
 
-    # Adjust leave duration for lunch break
-    working_hours = calculate_working_hours(instance.start_datetime, instance.end_datetime)
+    # คำนวณชั่วโมงลางานโดยใช้ตาราง Shift ที่กำหนดให้พนักงาน
+    working_hours = calculate_working_hours(instance.user, instance.start_datetime, instance.end_datetime)
 
     # ค้นหา LeaveBalance ที่เกี่ยวข้อง
     leave_balance = LeaveBalance.objects.filter(user=instance.user, leave_type=instance.leave_type).first()

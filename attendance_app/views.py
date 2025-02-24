@@ -1,7 +1,9 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
+from django.utils import timezone
+
 from user_app.models import User, BsnStaff
-from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveType
+from attendance_app.models import *
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.conf import settings
@@ -12,7 +14,7 @@ from allauth.socialaccount.models import SocialAccount
 from attendance_app.utils import calculate_working_hours  # Import the utility function
 from django.utils.timezone import now
 from django.db.models import Q
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils.dateparse import parse_date
 import csv
 from openpyxl import Workbook
@@ -79,8 +81,8 @@ def get_leave_attendances(request):
     # กรองข้อมูลตาม start_date, และ leave_type
     if start_datetime:
         leave_attendances = leave_attendances.filter(
-            start_datetime__lte=start_datetime,
-            end_datetime__gte=start_datetime
+            start_datetime__date__lte=start_datetime,
+            start_datetime__date__gte=start_datetime
         )
     if leave_type_id:
         leave_attendances = leave_attendances.filter(leave_type_id=leave_type_id)
@@ -258,16 +260,18 @@ def leave_request_view_auth(request):
         reason = data.get("reason")
         leave_type_id = data.get("type")
 
-        # Calculate working hours only
-        working_hours = calculate_working_hours(start_datetime, end_datetime)
+        # Retrieve user details
+        user = request.user
+        social_account = SocialAccount.objects.filter(user=user).first()
+        if not social_account:
+            return JsonResponse({"error": "ไม่พบข้อมูล Social Account"}, status=404)
 
+        user_id = social_account.uid
+
+        # Calculate working hours based on shifts
+        working_hours = calculate_working_hours(user, start_datetime, end_datetime)
         if working_hours <= 0:
             return JsonResponse({"error": "ช่วงเวลาที่เลือกไม่ได้อยู่ในเวลาทำงาน"}, status=400)
-
-        # days = (datetime.strptime(end_date, "%Y-%m-%d") - datetime.strptime(start_date, "%Y-%m-%d")).days + 1
-
-        user = SocialAccount.objects.filter(user=request.user).first()
-        user_id = user.uid
 
         # ตรวจสอบว่าประเภทการลามีอยู่ในระบบ
         leave_type = LeaveType.objects.filter(id=leave_type_id).first()
@@ -294,7 +298,7 @@ def leave_request_view_auth(request):
 
         # สร้าง LeaveAttendance
         leave_record = LeaveAttendance.objects.create(
-            user=user.user,
+            user=user,
             approve_user=approver_user.user,
             start_datetime=start_datetime,
             end_datetime=end_datetime,
@@ -391,7 +395,7 @@ def leave_request_detail(request, leave_id):
     leave_request = get_object_or_404(LeaveAttendance, id=leave_id)
 
     # Calculate working hours only
-    total_duration = calculate_working_hours(leave_request.start_datetime, leave_request.end_datetime)
+    total_duration = calculate_working_hours(leave_request.user, leave_request.start_datetime, leave_request.end_datetime)
     leave_hours = f"{total_duration // 8:.0f} วัน" if total_duration >= 8 else f"{total_duration:.1f} ชม."
     staff = BsnStaff.objects.filter(django_usr_id=leave_request.user.id).first()
     approver = BsnStaff.objects.filter(django_usr_id=leave_request.approve_user.id).first()
@@ -450,21 +454,35 @@ def leave_request_detail(request, leave_id):
                   {"leave_request": leave_request, "staff": staff, "approver": approver, "leave_hours": leave_hours})
 
 
+from django.utils.dateparse import parse_date
+
+
 @login_required(login_url='log-in')
 def leave_requests_approval(request):
-    # Determine if the user is an approver
-    if not BsnStaff.objects.filter(django_usr_id=request.user, staff_type="manager").exists():
+    # ตรวจสอบสิทธิ์ของผู้ใช้
+    if not User.objects.filter(username=request.user, groups=3).exists():
         return JsonResponse({"error": "คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ได้"}, status=400)
 
-    # Base queryset for approver
-    leave_requests = LeaveAttendance.objects.filter(approve_user=request.user).order_by('-start_datetime')
-
-    # Apply filters from query parameters
+    # รับค่าค้นหาจาก query parameters
     status = request.GET.get("status")
     user = request.GET.get("user")
     leave_type = request.GET.get("leave_type")
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
+
+    # ตรวจสอบว่ามีการค้นหาหรือไม่
+    is_searching = any([status, user, leave_type, start_date, end_date])
+
+    # ถ้าไม่มีการค้นหา ให้แสดงข้อความ "กรุณาค้นหาคำขออนุมัติ"
+    if not is_searching:
+        return render(request, "attendance/leave_requests_approval.html", {
+            "leave_requests": None,
+            "role": "approver",
+            "leave_types": LeaveType.objects.all(),
+        })
+
+    # Query คำขออนุมัติ
+    leave_requests = LeaveAttendance.objects.filter(approve_user=request.user).order_by('-start_datetime')
 
     if status:
         leave_requests = leave_requests.filter(status=status)
@@ -485,68 +503,77 @@ def leave_requests_approval(request):
     if end_date:
         end_date_obj = parse_date(end_date)
         if end_date_obj:
-            leave_requests = leave_requests.filter(end_datetime__date__lte=end_date_obj)
+            leave_requests = leave_requests.filter(start_datetime__date__lte=end_date_obj)
 
-    # Enrich the data for display
+    # เพิ่มข้อมูลที่คำนวณได้สำหรับการแสดงผล
     for leave_request in leave_requests:
-        leave_hours = calculate_working_hours(leave_request.start_datetime, leave_request.end_datetime)
+        leave_hours = calculate_working_hours(leave_request.user, leave_request.start_datetime, leave_request.end_datetime)
         leave_request.total_duration = (
             f"{leave_hours // 8:.0f} วัน" if leave_hours >= 8 else f"{leave_hours:.1f} ชม."
         )
-        leave_request.staff_brc = BsnStaff.objects.filter(django_usr_id=leave_request.user).first().brc_id.brc_sname
-
-    leave_types = LeaveType.objects.all()
+        staff_info = BsnStaff.objects.filter(django_usr_id=leave_request.user).first()
+        leave_request.staff_brc = staff_info.brc_id.brc_sname if staff_info else "N/A"
 
     return render(request, "attendance/leave_requests_approval.html", {
         "leave_requests": leave_requests,
         "role": "approver",
-        "leave_types": leave_types,
+        "leave_types": LeaveType.objects.all(),
     })
 
 
 @login_required(login_url='log-in')
 def leave_requests_list(request):
-    # Determine if the user is an approver or requester
-    if BsnStaff.objects.filter(django_usr_id=request.user).exists():
-        leave_requests = LeaveAttendance.objects.filter(user=request.user).order_by('-start_datetime')
-
-        # Apply filters from query parameters
-        status = request.GET.get("status")
-        leave_type = request.GET.get("leave_type")
-        start_date = request.GET.get("start_date")
-        end_date = request.GET.get("end_date")
-
-        if status:
-            leave_requests = leave_requests.filter(status=status)
-
-        if leave_type:
-            leave_requests = leave_requests.filter(leave_type__id=leave_type)
-
-        if start_date:
-            start_date_obj = parse_date(start_date)
-            if start_date_obj:
-                leave_requests = leave_requests.filter(start_datetime__date__gte=start_date_obj)
-
-        if end_date:
-            end_date_obj = parse_date(end_date)
-            if end_date_obj:
-                leave_requests = leave_requests.filter(end_datetime__date__lte=end_date_obj)
-
-        for leave_request in leave_requests:
-            # Calculate working hours only
-            leave_hours = calculate_working_hours(leave_request.start_datetime, leave_request.end_datetime)
-            leave_request.total_duration = (
-                f"{leave_hours // 8:.0f} วัน" if leave_hours >= 8 else f"{leave_hours:.1f} ชม."
-            )
-            leave_request.staff_brc = BsnStaff.objects.filter(django_usr_id=leave_request.user).first().brc_id.brc_sname
-    else:
+    # ตรวจสอบว่าผู้ใช้เป็นพนักงานหรือไม่
+    if not BsnStaff.objects.filter(django_usr_id=request.user).exists():
         return JsonResponse({"error": "คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ได้"}, status=400)
 
-    leave_types = LeaveType.objects.all()
+    # รับค่าค้นหาจาก query parameters
+    status = request.GET.get("status")
+    leave_type = request.GET.get("leave_type")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    # ตรวจสอบว่ามีการค้นหาหรือไม่
+    is_searching = any([status, leave_type, start_date, end_date])
+
+    # ถ้าไม่มีการค้นหา ให้แสดงข้อความ "กรุณาค้นหาคำขออนุมัติ"
+    if not is_searching:
+        return render(request, "attendance/leave_requests_list.html", {
+            "leave_requests": None,
+            "leave_types": LeaveType.objects.all(),
+        })
+
+    # Query คำขออนุมัติ
+    leave_requests = LeaveAttendance.objects.filter(user=request.user).order_by('-start_datetime')
+
+    if status:
+        leave_requests = leave_requests.filter(status=status)
+
+    if leave_type:
+        leave_requests = leave_requests.filter(leave_type__id=leave_type)
+
+    if start_date:
+        start_date_obj = parse_date(start_date)
+        if start_date_obj:
+            leave_requests = leave_requests.filter(start_datetime__date__gte=start_date_obj)
+
+    if end_date:
+        end_date_obj = parse_date(end_date)
+        if end_date_obj:
+            leave_requests = leave_requests.filter(start_datetime__date__lte=end_date_obj)
+
+    # เพิ่มข้อมูลที่คำนวณได้สำหรับการแสดงผล
+    for leave_request in leave_requests:
+        leave_hours = calculate_working_hours(leave_request.user, leave_request.start_datetime, leave_request.end_datetime)
+        leave_request.total_duration = (
+            f"{leave_hours // 8:.0f} วัน" if leave_hours >= 8 else f"{leave_hours:.1f} ชม."
+        )
+        staff_info = BsnStaff.objects.filter(django_usr_id=leave_request.user).first()
+        leave_request.staff_brc = staff_info.brc_id.brc_sname if staff_info else "N/A"
 
     return render(request, "attendance/leave_requests_list.html", {
         "leave_requests": leave_requests,
-        "leave_types": leave_types,
+        "leave_types": LeaveType.objects.all(),
     })
 
 
@@ -601,6 +628,19 @@ def leave_attendance_list(request):
     start_date = request.GET.get('start_date', '')
     end_date = request.GET.get('end_date', '')
 
+    # ตรวจสอบว่ามีเงื่อนไขการค้นหาหรือไม่
+    is_searching = any([search_query, status_filter, start_date, end_date])
+
+    # ถ้าไม่มีการค้นหา ให้แสดงผลลัพธ์เป็นค่าว่าง
+    if not is_searching:
+        return render(request, 'attendance/leave_attendance_list.html', {
+            'data': None,  # ส่งค่า None ไปยัง template
+            'search_query': search_query,
+            'status_filter': status_filter,
+            'start_date': start_date,
+            'end_date': end_date
+        })
+
     # Query เบื้องต้น
     leave_attendances = LeaveAttendance.objects.select_related('user')
 
@@ -627,7 +667,7 @@ def leave_attendance_list(request):
     # เตรียมข้อมูลสำหรับ Template
     data = []
     for attendance in leave_attendances:
-        total_duration = calculate_working_hours(attendance.start_datetime, attendance.end_datetime)
+        total_duration = calculate_working_hours(attendance.user, attendance.start_datetime, attendance.end_datetime)
         leave_hours = f"{total_duration // 8:.0f} วัน" if total_duration >= 8 else f"{total_duration:.1f} ชม."
         bsn_staff = BsnStaff.objects.filter(django_usr_id=attendance.user).first()
         forward_or_backward_days = (attendance.start_datetime - attendance.created_at).days
@@ -649,7 +689,7 @@ def leave_attendance_list(request):
             'hours': leave_hours,
             'total_days': leave_hours,
             'amount': '0.00',
-            'forward_or_backward': f'ย้อนหลัง {forward_or_backward_days*(-1)} วัน' if attendance.start_datetime < attendance.created_at else f'ล่วงหน้า {forward_or_backward_days} วัน'
+            'forward_or_backward': f'ย้อนหลัง {forward_or_backward_days * (-1)} วัน' if attendance.start_datetime < attendance.created_at else f'ล่วงหน้า {forward_or_backward_days} วัน'
         })
 
     return render(request, 'attendance/leave_attendance_list.html', {
@@ -690,7 +730,7 @@ def export_leave_attendance_excel(request):
     if start_date and end_date:
         leave_attendances = leave_attendances.filter(
             start_datetime__date__gte=start_date,
-            end_datetime__date__lte=end_date
+            start_datetime__date__lte=end_date
         )
 
     # สร้าง Workbook และ Sheet
@@ -709,7 +749,7 @@ def export_leave_attendance_excel(request):
 
     # ดึงข้อมูลและเขียนลงในไฟล์ Excel
     for idx, attendance in enumerate(leave_attendances):
-        total_duration = calculate_working_hours(attendance.start_datetime, attendance.end_datetime)
+        total_duration = calculate_working_hours(attendance.user, attendance.start_datetime, attendance.end_datetime)
         leave_hours = f"{total_duration // 8:.0f} วัน" if total_duration >= 8 else f"{total_duration:.1f} ชม."
         bsn_staff = BsnStaff.objects.filter(django_usr_id=attendance.user).first()
         date_range = f"{attendance.start_datetime:%d/%m/%Y} - {attendance.end_datetime:%d/%m/%Y}"
@@ -735,7 +775,7 @@ def export_leave_attendance_excel(request):
             details,
             leave_hours,
             '0.00',
-            f'ย้อนหลัง {forward_or_backward_days*(-1)} วัน' if attendance.start_datetime < attendance.created_at else f'ล่วงหน้า {forward_or_backward_days} วัน'
+            f'ย้อนหลัง {forward_or_backward_days * (-1)} วัน' if attendance.start_datetime < attendance.created_at else f'ล่วงหน้า {forward_or_backward_days} วัน'
         ])
 
     # กำหนด Response สำหรับการดาวน์โหลดไฟล์
@@ -747,3 +787,249 @@ def export_leave_attendance_excel(request):
     # บันทึกไฟล์ Excel ลงใน Response
     workbook.save(response)
     return response
+
+
+@login_required(login_url='log-in')
+def shift_schedule_update(request):
+    if request.method == "POST":
+        selected_month = int(request.POST.get("month"))
+        selected_year = int(request.POST.get("year"))
+        selected_shift_id = request.POST.get("shift")
+
+        user = request.user
+        staff = BsnStaff.objects.filter(django_usr_id=user).first()
+        approver_person = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
+        approver_user = User.objects.filter(id=approver_person.django_usr_id.id).first()
+
+        # ดึง Shift ที่เลือก
+        selected_shift = Shift.objects.get(id=selected_shift_id)
+
+        # คำนวณช่วงวันที่เริ่มต้นและสิ้นสุด (21 ของเดือนที่เลือก - 20 ของเดือนถัดไป)
+        start_date = datetime(selected_year, selected_month, 21).date()
+        next_month = selected_month + 1 if selected_month < 12 else 1
+        next_year = selected_year if selected_month < 12 else selected_year + 1
+        end_date = datetime(next_year, next_month, 20).date()
+
+        # ตรวจสอบว่าผู้ใช้เป็นพนักงานกลุ่ม 1 (ต้องใส่วันหยุดวันเสาร์-อาทิตย์)
+        is_regular_employee = user.groups.filter(id=1).exists()
+        public_holiday_cn = PublicHoliday.objects.filter(group="CN")
+        public_holiday_op = PublicHoliday.objects.filter(group="OP")
+
+        # วนลูปสร้าง/อัปเดตกะของพนักงาน
+        current_date = start_date
+        while current_date <= end_date:
+            shift_day = "working_day"
+
+            if is_regular_employee:
+                if public_holiday_cn.filter(date=current_date):
+                    shift_day = "public_holiday"
+                # ถ้าผู้ใช้เป็นพนักงานกลุ่ม 1 ให้ใส่วันหยุดวันเสาร์-อาทิตย์
+                if current_date.weekday() in [5, 6]:
+                    shift_day = "day_off"
+            else:
+                if public_holiday_op.filter(date=current_date):
+                    shift_day = "public_holiday"
+
+            # ใช้ update_or_create แทนที่จะลบและสร้างใหม่
+            ShiftSchedule.objects.update_or_create(
+                user=user,
+                date=current_date,
+                shift_day=shift_day,
+                defaults={"shift": selected_shift,
+                          "status": "approved",
+                          "approve_user": approver_user,
+                          }
+            )
+
+            current_date += timedelta(days=1)
+
+        return JsonResponse({"message": "อัปเดตตารางกะสำเร็จแล้ว"}, status=200)
+
+    shifts = Shift.objects.all()
+    return render(request, "attendance/shift_schedule_update.html", {
+        "shifts": shifts,
+        "months": range(1, 13),
+        "years": range(2025, 2031),
+    })
+
+
+@login_required(login_url='log-in')
+def shift_schedule_view(request):
+    shifts = Shift.objects.all()
+
+    # ดึงข้อมูลวันลาทั้งหมดที่ได้รับการอนุมัติ
+    leave_attendances = LeaveAttendance.objects.filter(user=request.user, status="approved")
+
+    # เก็บช่วงวันที่ทั้งหมดที่อยู่ในช่วงลา
+    leave_dates_set = set()
+    for leave in leave_attendances:
+        current_date = leave.start_datetime.date()
+        end_date = leave.end_datetime.date()
+        while current_date <= end_date:
+            leave_dates_set.add(current_date.strftime("%Y-%m-%d"))
+            current_date += timedelta(days=1)
+
+    leave_dates_list = list(leave_dates_set)  # แปลงเป็นลิสต์เพื่อให้ JavaScript ใช้ได้
+
+    if request.method == "GET" and "month" in request.GET and "year" in request.GET:
+        selected_month = int(request.GET.get("month"))
+        selected_year = int(request.GET.get("year"))
+
+        start_date = datetime(selected_year, selected_month, 21).date()
+        next_month = selected_month + 1 if selected_month < 12 else 1
+        next_year = selected_year if selected_month < 12 else selected_year + 1
+        end_date = datetime(next_year, next_month, 20).date()
+
+        shift_schedules = ShiftSchedule.objects.filter(
+            user=request.user, date__range=[start_date, end_date]
+        ).order_by("date")
+
+        return render(request, "attendance/shift_schedule_view.html", {
+            "shifts": shifts,
+            "shift_schedules": shift_schedules,
+            "selected_month": selected_month,
+            "selected_year": selected_year,
+            "months": range(1, 13),
+            "years": range(2025, 2027),
+            "leave_dates": leave_dates_list,  # ส่งช่วงวันลาไปยัง JavaScript
+        })
+
+    return render(request, "attendance/shift_schedule_view.html", {
+        "shifts": shifts,
+        "months": range(1, 13),
+        "years": range(2025, 2027),
+    })
+
+
+
+@login_required(login_url='log-in')
+def shift_schedule_bulk_update(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        updates = data.get("updates", {})
+        user = request.user
+        staff = BsnStaff.objects.filter(django_usr_id=user).first()
+        approver_person = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
+        approver_user = User.objects.filter(id=approver_person.django_usr_id.id).first()
+
+        for schedule_id, update in updates.items():
+            schedule = ShiftSchedule.objects.filter(id=schedule_id, user=user).first()
+
+            if schedule:
+                schedule.shift_id = update["shift"]
+                schedule.shift_day = update["shift_day"]
+                schedule.approver_user = approver_user
+                schedule.status = "pending"
+                schedule.updated_at = timezone.now()
+                schedule.save()
+
+        return JsonResponse({"message": "อัปเดตกะสำเร็จแล้ว"}, status=200)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+@login_required(login_url='log-in')
+def shift_schedule_approve(request):
+    if not User.objects.filter(username=request.user, groups=3).exists():
+        return JsonResponse({"error": "คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้"}, status=400)
+
+    if request.method == "POST":
+        data = json.loads(request.body)
+        schedule_id = data.get("schedule_id")
+        action = data.get("action")  # "approve" or "reject"
+
+        shift_schedule = get_object_or_404(ShiftSchedule, id=schedule_id)
+
+        if shift_schedule.status != "pending":
+            return JsonResponse({"error": "ไม่สามารถอนุมัติคำขอที่ได้รับการพิจารณาแล้วได้"}, status=400)
+
+        if action == "approve":
+            shift_schedule.status = "approved"
+        elif action == "reject":
+            shift_schedule.status = "rejected"
+        else:
+            return JsonResponse({"error": "การดำเนินการไม่ถูกต้อง"}, status=400)
+
+        shift_schedule.approve_user = request.user
+        shift_schedule.updated_at = timezone.now()
+        shift_schedule.save()
+
+        return JsonResponse({"message": "อัปเดตสถานะสำเร็จแล้ว"}, status=200)
+
+    # รับค่าค้นหาและตัวกรองจาก request GET
+    search_query = request.GET.get("search", "")
+    status_filter = request.GET.get("status", "")
+    start_date = request.GET.get("start_date", "")
+    end_date = request.GET.get("end_date", "")
+
+    # ตรวจสอบว่ามีการค้นหาหรือไม่
+    is_searching = any([search_query, status_filter, start_date, end_date])
+
+    # ถ้าไม่มีการค้นหา ให้ schedules เป็น None เพื่อไม่ให้แสดงผลลัพธ์
+    if not is_searching:
+        return render(request, "attendance/shift_schedule_approve.html", {
+            "schedules": None,  # ไม่แสดงตาราง
+            "search_query": search_query,
+            "status_filter": status_filter,
+            "start_date": start_date,
+            "end_date": end_date
+        })
+
+    # ดึงข้อมูลคำขอที่รออนุมัติ
+    schedules = ShiftSchedule.objects.filter(approve_user=request.user).select_related("user", "shift").order_by("date")
+
+    # ค้นหาชื่อพนักงาน
+    if search_query:
+        schedules = schedules.filter(
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query) |
+            Q(user__username__icontains=search_query)
+        )
+
+    # กรองสถานะ
+    if status_filter:
+        schedules = schedules.filter(status=status_filter)
+
+    # กรองวันที่
+    if start_date and end_date:
+        schedules = schedules.filter(date__range=[start_date, end_date])
+
+    return render(request, "attendance/shift_schedule_approve.html", {
+        "schedules": schedules,
+        "search_query": search_query,
+        "status_filter": status_filter,
+        "start_date": start_date,
+        "end_date": end_date
+    })
+
+
+@login_required(login_url='log-in')
+def shift_schedule_batch_approve(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            schedule_ids = data.get("schedule_ids", [])
+            action = data.get("action")
+
+            if not schedule_ids:
+                return JsonResponse({"error": "กรุณาเลือกคำขอที่ต้องการพิจารณา"}, status=400)
+
+            if action not in ["approve", "reject"]:
+                return JsonResponse({"error": "การดำเนินการไม่ถูกต้อง"}, status=400)
+
+            # ดึงรายการที่เลือกและเปลี่ยนสถานะ
+            schedules = ShiftSchedule.objects.filter(id__in=schedule_ids, status="pending")
+
+            if not schedules.exists():
+                return JsonResponse({"error": "ไม่มีคำขอที่สามารถพิจารณาได้"}, status=404)
+
+            update_status = "approved" if action == "approve" else "rejected"
+
+            schedules.update(status=update_status, approve_user=request.user, updated_at=timezone.now())
+
+            return JsonResponse({"message": "อัปเดตสถานะสำเร็จแล้ว"}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)

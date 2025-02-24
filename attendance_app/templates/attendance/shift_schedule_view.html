@@ -1,0 +1,180 @@
+{% extends "general/base.html" %}
+{% block title %}ตารางกะทำงาน{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+<div class="container " style="width: 95%;">
+    <h1 class="text-center">ตารางกะทำงาน</h1>
+
+    <!-- Search Form -->
+    <form id="search-form" class="row g-3">
+        <div class="col-md-4">
+            <label for="month" class="form-label">เดือน</label>
+            <select id="month" name="month" class="form-select form-input">
+                <option value="">เลือกเดือน</option>
+                {% for m in months %}
+                <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="year" class="form-label">ปี</label>
+            <select id="year" name="year" class="form-select form-input">
+                <option value="">เลือกปี</option>
+                {% for y in years %}
+                <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4 align-self-end">
+            <button type="submit" class="btn btn-primary btn-sm">ค้นหา</button>
+        </div>
+    </form>
+
+    <hr>
+
+    <!-- Shift Schedule Table -->
+    {% if shift_schedules %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover mt-4">
+            <thead class="table-light">
+                <tr>
+                    <th>วันที่</th>
+                    <th>ประเภทวัน</th>
+                    <th>เปลี่ยนกะ</th>
+                    <th>สถานะ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for schedule in shift_schedules %}
+                <tr>
+                    <td class="align-content-end">{{ schedule.date|date:"d/m/Y" }}</td>
+
+                    <td class="align-content-end">
+                        <select class="form-select update-shift-day form-input" data-id="{{ schedule.id }}">
+                            <option value="working_day" {% if schedule.shift_day == 'working_day' %}selected{% endif %}>วันทำงาน</option>
+                            <option value="day_off" {% if schedule.shift_day == 'day_off' %}selected{% endif %}>วันหยุด</option>
+                            <option value="public_holiday" {% if schedule.shift_day == 'public_holiday' %}selected{% endif %}>วันหยุดนักขัตฤกษ์</option>
+                        </select>
+                    </td>
+
+                    <td class="align-content-end">
+                        <select class="form-select update-shift form-input" data-id="{{ schedule.id }}">
+                            {% for shift in shifts %}
+                            <option value="{{ shift.id }}" {% if schedule.shift.id == shift.id %}selected{% endif %}>
+                                {{ shift.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+
+                    <td class="align-content-end">{{ schedule.get_status_display }}</td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Confirmation Button -->
+    <div class="text-center mt-4">
+        <button id="confirm-updates" class="btn btn-success">ยืนยัน</button>
+    </div>
+
+    {% else %}
+    <p class="text-center text-muted mt-4">กรุณาค้นหากะทำงานของคุณ</p>
+    {% endif %}
+</div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const updates = {}; // เก็บค่าที่เปลี่ยนแปลง
+    const initialData = {}; // เก็บค่ากะและประเภทวันก่อนการแก้ไข
+    const leaveDates = {{ leave_dates|safe }}; // ดึงข้อมูลวันลาจาก Backend (เป็น YYYY-MM-DD)
+
+    // ฟังก์ชันแปลง `dd/mm/YYYY` เป็น `YYYY-MM-DD`
+    function convertToISODate(dateStr) {
+        const parts = dateStr.split("/");
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;  // YYYY-MM-DD
+        }
+        return dateStr;
+    }
+
+    // เก็บค่าตั้งต้นของแต่ละแถวก่อนการแก้ไข
+    document.querySelectorAll("tr").forEach(row => {
+        const scheduleId = row.querySelector(".update-shift")?.dataset.id;
+        if (scheduleId) {
+            initialData[scheduleId] = {
+                shift: row.querySelector(".update-shift").value,
+                shift_day: row.querySelector(".update-shift-day").value
+            };
+        }
+    });
+
+    // ปิดการแก้ไขกะทุกวันที่อยู่ในช่วงลา
+    document.querySelectorAll(".update-shift").forEach(select => {
+        const row = select.closest("tr");
+        const scheduleDate = convertToISODate(row.querySelector("td:first-child").innerText.trim());
+
+        if (leaveDates.includes(scheduleDate)) {
+            select.disabled = true;
+            select.classList.add("disabled");
+            row.style.backgroundColor = "#f8d7da"; // เปลี่ยนสีพื้นหลังแดงอ่อน
+            row.style.color = "#721c24"; // เปลี่ยนสีตัวอักษรแดงเข้ม
+            row.querySelector(".update-shift-day").disabled = true; // ปิดประเภทวันด้วย
+        }
+    });
+
+    // บันทึกค่าที่เปลี่ยนแปลงลง `updates` ถ้าไม่ตรงกับค่าเริ่มต้น
+    function storeUpdate(scheduleId) {
+        const shift = document.querySelector(`.update-shift[data-id="${scheduleId}"]`).value;
+        const shift_day = document.querySelector(`.update-shift-day[data-id="${scheduleId}"]`).value;
+
+        if (shift !== initialData[scheduleId].shift || shift_day !== initialData[scheduleId].shift_day) {
+            updates[scheduleId] = { shift, shift_day };
+        } else {
+            delete updates[scheduleId]; // ลบออกถ้าค่ากลับไปเหมือนเดิม
+        }
+    }
+
+    // ตรวจจับการเปลี่ยนแปลงค่าของกะและประเภทวัน
+    document.querySelectorAll(".update-shift, .update-shift-day").forEach(element => {
+        element.addEventListener("change", function() {
+            storeUpdate(this.dataset.id);
+        });
+    });
+
+    // กดปุ่ม "ยืนยัน" เพื่อบันทึกข้อมูลที่เปลี่ยนแปลง
+    document.getElementById("confirm-updates").addEventListener("click", function() {
+        if (Object.keys(updates).length === 0) {
+            alert("ไม่มีการเปลี่ยนแปลงใด ๆ");
+            return;
+        }
+
+        fetch("/attendance/shift-schedule-bulk-update/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify({ updates })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert("เกิดข้อผิดพลาด: " + data.error);
+            } else {
+                alert("อัปเดตกะทั้งหมดสำเร็จแล้ว!");
+                location.reload(); // Reload page after update
+            }
+        })
+        .catch(err => console.error("Error updating shifts:", err));
+    });
+});
+
+
+</script>
+
+{% endblock %}

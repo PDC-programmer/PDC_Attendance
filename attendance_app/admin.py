@@ -1,7 +1,9 @@
 from django.contrib import admin
-from .models import LeaveType, LeaveAttendance, LeaveBalance
-
+from .models import *
 admin.site.register(LeaveType)
 admin.site.register(LeaveAttendance)
 admin.site.register(LeaveBalance)
+admin.site.register(Shift)
+admin.site.register(ShiftSchedule)
+admin.site.register(PublicHoliday)
 

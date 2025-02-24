@@ -19,4 +19,10 @@ urlpatterns = [
     path('leave-attendance/', views.leave_attendance_list, name='leave_attendance_list'),
     path('leave-attendance/export/excel/', views.export_leave_attendance_excel, name='export_leave_attendance_excel'),
 
+    path("shift-schedule-bulk-update/", views.shift_schedule_bulk_update, name="shift_schedule_bulk_update"),
+    path("shift-schedule-update/", views.shift_schedule_update, name="shift_schedule_update"),
+    path('shift-schedule-view/', views.shift_schedule_view, name='shift_schedule_view'),
+    path("shift-schedule-approve/", views.shift_schedule_approve, name="shift_schedule_approve"),
+    path("shift-schedule-batch-approve/", views.shift_schedule_batch_approve, name="shift_schedule_batch_approve"),
+
 ]

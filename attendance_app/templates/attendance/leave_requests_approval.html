@@ -3,7 +3,7 @@
 {% block title %}รายการคำขออนุมัติ{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-center align-items-center vh-100">
+<div class="d-flex justify-content-center align-items-center my-5">
 <div class="container " style="width: 95%;">
     <h1 class="text-center my-4">รายการคำขออนุมัติ</h1>
 
@@ -12,22 +12,23 @@
         <form id="filter-form" class="mb-4 row g-3">
             <div class="col-md-5">
                 <label for="filter-user" class="form-label">ชื่อผู้ขอ</label>
-                <input type="text" id="filter-user" name="user" class="form-control" placeholder="ชื่อผู้ขอ">
+                <input type="text" id="filter-user" name="user" class="form-control form-input" placeholder="ชื่อผู้ขอ">
             </div>
 
             <div class="col-md-3">
                 <label for="filter-status" class="form-label">สถานะ</label>
-                <select id="filter-status" name="status" class="form-select">
+                <select id="filter-status" name="status" class="form-select form-input">
                     <option value="">ทั้งหมด</option>
                     <option value="pending">รออนุมัติ</option>
                     <option value="approved">อนุมัติ</option>
                     <option value="rejected">ปฏิเสธ</option>
+                    <option value="cancelled">ยกเลิก</option>
                 </select>
             </div>
 
             <div class="col-md-3">
                 <label for="filter-leave-type" class="form-label">ประเภท</label>
-                <select id="filter-leave-type" name="leave_type" class="form-select">
+                <select id="filter-leave-type" name="leave_type" class="form-select form-input">
                     <option value="">ทั้งหมด</option>
                     {% for leave_type in leave_types %}
                     <option value="{{ leave_type.id }}">{{ leave_type.th_name }}</option>
@@ -37,11 +38,11 @@
 
             <div class="col-md-3">
                 <label for="filter-start-date" class="form-label">เริ่มวันที่</label>
-                <input type="date" id="filter-start-date" name="start_date" class="form-control">
+                <input type="date" id="filter-start-date" name="start_date" class="form-control form-input">
             </div>
             <div class="col-md-3">
                 <label for="filter-end-date" class="form-label">สิ้นสุดวันที่</label>
-                <input type="date" id="filter-end-date" name="end_date" class="form-control">
+                <input type="date" id="filter-end-date" name="end_date" class="form-control form-input">
             </div>
 
             <div class="col-md-12 text-start">
@@ -56,7 +57,9 @@
         <button id="reject-selected" class="btn btn-danger btn-sm">ปฏิเสธที่เลือก</button>
     </div>
     {% endif %}
+    {% if leave_requests %}
     <div class="table-responsive">
+
         <table class="table table-bordered table-hover" >
             <thead class="table-light">
                 <tr>
@@ -73,7 +76,7 @@
             </thead>
             <tbody>
                 {% for request in leave_requests %}
-                <tr class="clickable-row" data-href="/attendance/leave-request-detail/{{ request.id }}/">
+                <tr >
                     {% if role == "approver" %}
                      <td>
                         <input type="checkbox" class="select-leave"
@@ -81,15 +84,15 @@
                                {% if request.status != 'pending' %}disabled{% endif %}>
                     </td>
                     {% endif %}
-                    <td>{{ request.leave_type.th_name }}</td>
-                    <td>{{ request.start_datetime|date:"d/m/Y H:i" }} - {{ request.end_datetime|date:"d/m/Y H:i" }}</td>
-                    <td>{{ request.total_duration }}</td>
+                    <td class="clickable-row" data-href="/attendance/leave-request-detail/{{ request.id }}/">{{ request.leave_type.th_name }}</td>
+                    <td class="clickable-row" data-href="/attendance/leave-request-detail/{{ request.id }}/">{{ request.start_datetime|date:"d/m/Y H:i" }} - {{ request.end_datetime|date:"d/m/Y H:i" }}</td>
+                    <td class="clickable-row" data-href="/attendance/leave-request-detail/{{ request.id }}/">{{ request.total_duration }}</td>
 
                     {% if role == "approver" %}
-                    <td>{{ request.user.get_full_name }}</td>
-                    <td>{{ request.staff_brc }}</td>
+                    <td class="clickable-row" data-href="/attendance/leave-request-detail/{{ request.id }}/">{{ request.user.get_full_name }}</td>
+                    <td class="clickable-row" data-href="/attendance/leave-request-detail/{{ request.id }}/">{{ request.staff_brc }}</td>
                     {% endif %}
-                    <td>
+                    <td class="clickable-row" data-href="/attendance/leave-request-detail/{{ request.id }}/">
                         <span class="badge {% if request.status == 'approved' %}bg-success
                                         {% elif request.status == 'rejected' %}bg-danger
                                         {% elif request.status == 'pending' %}bg-warning text-dark
@@ -102,6 +105,9 @@
             </tbody>
         </table>
     </div>
+    {% else %}
+        <p class="text-center text-muted">กรุณาค้นหาคำขออนุมัติ !</p>
+    {% endif %}
 </div>
 </div>
 
