@@ -240,8 +240,8 @@
                         Swal.fire("ผิดพลาด", data.error, "error");
                     }
                      else {
-                        Swal.fire("สำเร็จ", "บันทึกคำขออนุมัติเสร็จสิ้น", "success").then(() => {
-                            location.reload();
+                        Swal.fire("สำเร็จ", "บันทึกคำขออนุมัติเสร็จสิ้น", "success").then(function() {
+                        window.location.href = "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-requests-list/?status=pending&leave_type=&start_date=&end_date=";
                         });
                     }
                 })

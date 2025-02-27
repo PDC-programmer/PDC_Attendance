@@ -19,6 +19,7 @@ from django.utils.dateparse import parse_date
 import csv
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
+from django.db import transaction
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -801,47 +802,60 @@ def shift_schedule_update(request):
         approver_person = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
         approver_user = User.objects.filter(id=approver_person.django_usr_id.id).first()
 
-        # ดึง Shift ที่เลือก
         selected_shift = Shift.objects.get(id=selected_shift_id)
 
-        # คำนวณช่วงวันที่เริ่มต้นและสิ้นสุด (21 ของเดือนที่เลือก - 20 ของเดือนถัดไป)
         start_date = datetime(selected_year, selected_month, 21).date()
         next_month = selected_month + 1 if selected_month < 12 else 1
         next_year = selected_year if selected_month < 12 else selected_year + 1
         end_date = datetime(next_year, next_month, 20).date()
 
-        # ตรวจสอบว่าผู้ใช้เป็นพนักงานกลุ่ม 1 (ต้องใส่วันหยุดวันเสาร์-อาทิตย์)
         is_regular_employee = user.groups.filter(id=1).exists()
-        public_holiday_cn = PublicHoliday.objects.filter(group="CN")
-        public_holiday_op = PublicHoliday.objects.filter(group="OP")
+        public_holiday_cn = set(PublicHoliday.objects.filter(group="CN").values_list("date", flat=True))
+        public_holiday_op = set(PublicHoliday.objects.filter(group="OP").values_list("date", flat=True))
 
-        # วนลูปสร้าง/อัปเดตกะของพนักงาน
+        existing_schedules = {
+            (s.date, s.shift_day): s for s in ShiftSchedule.objects.filter(user=user, date__range=[start_date, end_date])
+        }
+
+        shift_schedules_to_create = []
+        shift_schedules_to_update = []
+
         current_date = start_date
         while current_date <= end_date:
             shift_day = "working_day"
 
             if is_regular_employee:
-                if public_holiday_cn.filter(date=current_date):
+                if current_date in public_holiday_cn:
                     shift_day = "public_holiday"
-                # ถ้าผู้ใช้เป็นพนักงานกลุ่ม 1 ให้ใส่วันหยุดวันเสาร์-อาทิตย์
                 if current_date.weekday() in [5, 6]:
                     shift_day = "day_off"
             else:
-                if public_holiday_op.filter(date=current_date):
+                if current_date in public_holiday_op:
                     shift_day = "public_holiday"
 
-            # ใช้ update_or_create แทนที่จะลบและสร้างใหม่
-            ShiftSchedule.objects.update_or_create(
-                user=user,
-                date=current_date,
-                shift_day=shift_day,
-                defaults={"shift": selected_shift,
-                          "status": "approved",
-                          "approve_user": approver_user,
-                          }
-            )
+            if (current_date, shift_day) in existing_schedules:
+                schedule = existing_schedules[(current_date, shift_day)]
+                schedule.shift = selected_shift
+                schedule.status = "approved"
+                schedule.approve_user = approver_user
+                shift_schedules_to_update.append(schedule)
+            else:
+                shift_schedules_to_create.append(ShiftSchedule(
+                    user=user,
+                    date=current_date,
+                    shift_day=shift_day,
+                    shift=selected_shift,
+                    status="approved",
+                    approve_user=approver_user
+                ))
 
             current_date += timedelta(days=1)
+
+        with transaction.atomic():
+            if shift_schedules_to_create:
+                ShiftSchedule.objects.bulk_create(shift_schedules_to_create, ignore_conflicts=True)
+            if shift_schedules_to_update:
+                ShiftSchedule.objects.bulk_update(shift_schedules_to_update, ['shift', 'status', 'approve_user'])
 
         return JsonResponse({"message": "อัปเดตตารางกะสำเร็จแล้ว"}, status=200)
 
@@ -851,6 +865,70 @@ def shift_schedule_update(request):
         "months": range(1, 13),
         "years": range(2025, 2031),
     })
+
+
+# @login_required(login_url='log-in')
+# def shift_schedule_update(request):
+#     if request.method == "POST":
+#         selected_month = int(request.POST.get("month"))
+#         selected_year = int(request.POST.get("year"))
+#         selected_shift_id = request.POST.get("shift")
+#
+#         user = request.user
+#         staff = BsnStaff.objects.filter(django_usr_id=user).first()
+#         approver_person = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
+#         approver_user = User.objects.filter(id=approver_person.django_usr_id.id).first()
+#
+#         # ดึง Shift ที่เลือก
+#         selected_shift = Shift.objects.get(id=selected_shift_id)
+#
+#         # คำนวณช่วงวันที่เริ่มต้นและสิ้นสุด (21 ของเดือนที่เลือก - 20 ของเดือนถัดไป)
+#         start_date = datetime(selected_year, selected_month, 21).date()
+#         next_month = selected_month + 1 if selected_month < 12 else 1
+#         next_year = selected_year if selected_month < 12 else selected_year + 1
+#         end_date = datetime(next_year, next_month, 20).date()
+#
+#         # ตรวจสอบว่าผู้ใช้เป็นพนักงานกลุ่ม 1 (ต้องใส่วันหยุดวันเสาร์-อาทิตย์)
+#         is_regular_employee = user.groups.filter(id=1).exists()
+#         public_holiday_cn = PublicHoliday.objects.filter(group="CN")
+#         public_holiday_op = PublicHoliday.objects.filter(group="OP")
+#
+#         # วนลูปสร้าง/อัปเดตกะของพนักงาน
+#         current_date = start_date
+#         while current_date <= end_date:
+#             shift_day = "working_day"
+#
+#             if is_regular_employee:
+#                 if public_holiday_cn.filter(date=current_date):
+#                     shift_day = "public_holiday"
+#                 # ถ้าผู้ใช้เป็นพนักงานกลุ่ม 1 ให้ใส่วันหยุดวันเสาร์-อาทิตย์
+#                 if current_date.weekday() in [5, 6]:
+#                     shift_day = "day_off"
+#             else:
+#                 if public_holiday_op.filter(date=current_date):
+#                     shift_day = "public_holiday"
+#
+#             # ใช้ update_or_create แทนที่จะลบและสร้างใหม่
+#             ShiftSchedule.objects.update_or_create(
+#                 user=user,
+#                 date=current_date,
+#                 shift_day=shift_day,
+#                 defaults={"shift": selected_shift,
+#                           "status": "approved",
+#                           "approve_user": approver_user,
+#                           }
+#             )
+#
+#             current_date += timedelta(days=1)
+#
+#         return JsonResponse({"message": "อัปเดตตารางกะสำเร็จแล้ว"}, status=200)
+#
+#     shifts = Shift.objects.all()
+#     return render(request, "attendance/shift_schedule_update.html", {
+#         "shifts": shifts,
+#         "months": range(1, 13),
+#         "years": range(2025, 2031),
+#     })
 
 
 @login_required(login_url='log-in')

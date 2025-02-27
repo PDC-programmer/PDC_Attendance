@@ -32,7 +32,6 @@ urlpatterns = [
     path('line/', include('line_app.urls')),
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),  # Add this for allauth
-    path('oho-chat/', include('ohochat_app.urls')),
 ]
 
 
