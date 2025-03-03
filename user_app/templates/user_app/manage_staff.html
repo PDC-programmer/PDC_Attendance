@@ -1,0 +1,172 @@
+{% extends "general/base.html" %}
+{% block title %}{{ staff.staff_code|default:"เพิ่มพนักงาน" }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+    <div class="container " style="width: 95%;">
+    <h1 class="text-center">ข้อมูลพนักงาน</h1>
+
+    <form method="POST" id="staff-form">
+        {% csrf_token %}
+        <input type="hidden" name="staff_id" value="{{ staff.staff_id|default:'' }}">
+
+        <div class="mb-3">
+            <label class="form-label">รหัสพนักงาน</label>
+            <input type="text" name="staff_code" class="form-control" required value="{{ staff.staff_code|default:'' }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">คำนำหน้าชื่อ</label>
+            <input type="text" name="staff_pname" class="form-control" value="{{ staff.staff_pname|default:'' }}">
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label">ชื่อ</label>
+                <input type="text" name="staff_fname" class="form-control" required value="{{ staff.staff_fname|default:'' }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">นามสกุล</label>
+                <input type="text" name="staff_lname" class="form-control" required value="{{ staff.staff_lname|default:'' }}">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label">ชื่อ (อังกฤษ)</label>
+                <input type="text" name="staff_fname_en" class="form-control" value="{{ staff.staff_fname_en|default:'' }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">นามสกุล (อังกฤษ)</label>
+                <input type="text" name="staff_lname_en" class="form-control" value="{{ staff.staff_lname_en|default:'' }}">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">ตำแหน่ง</label>
+            <input type="text" name="staff_title" class="form-control" required value="{{ staff.staff_title|default:'' }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">แผนก</label>
+            <input type="text" name="staff_department" class="form-control" value="{{ staff.staff_department|default:'' }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">เลือกสาขา</label>
+            <select name="brc_id" class="form-select" required>
+                {% for branch in branches %}
+                <option value="{{ branch.id }}" {% if staff and staff.brc_id.id == branch.id %}selected{% endif %}>{{ branch.brc_sname }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3 form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="brc_chkin_status" name="brc_chkin_status"
+                {% if staff.brc_chkin_status == "Unrestricted" %}checked{% endif %}>
+            <label class="form-check-label" for="brc_chkin_status">(เช็คอินต่างสาขาได้)</label>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">เลือกกลุ่มพนักงาน</label>
+            <select name="group_id" class="form-select" required>
+                {% for group in groups %}
+                <option value="{{ group.id }}" {% if staff and staff.group.id == group.id %}selected{% endif %}>{{ group.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">รหัสพนักงานผู้จัดการ</label>
+            <input type="text" id="mng_staff_input" name="mng_staff_id" class="form-control"
+                   placeholder="ค้นหารหัสพนักงานผู้จัดการ..."
+                   value="{{ staff.mng_staff_code|default:'' }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">ประเภทพนักงาน</label>
+            <select name="staff_type" class="form-select" required>
+                <option value="Staff" {% if staff.staff_type == "Staff" %}selected{% endif %}>Staff</option>
+                <option value="Manager" {% if staff.staff_type == "Manager" %}selected{% endif %}>Manager</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">วันที่เริ่มงาน</label>
+            <input type="date" name="date_of_start" class="form-control" value="{{ staff.date_of_start|date:'Y-m-d'|default:'' }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">วันที่ลาออก</label>
+            <input type="date" name="date_of_resign" class="form-control" value="{{ staff.date_of_resign|date:'Y-m-d'|default:'' }}">
+        </div>
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary">{% if staff %}อัปเดตพนักงาน{% else %}เพิ่มพนักงาน{% endif %}</button>
+        </div>
+    </form>
+</div>
+</div>
+
+<!-- jQuery & jQuery UI -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
+
+<script>
+$(document).ready(function() {
+    // ✅ AutoComplete รหัสพนักงานผู้จัดการ
+    $("#mng_staff_input").autocomplete({
+        source: function(request, response) {
+            $.ajax({
+                url: "{% url 'get_staff_codes' %}", // ต้องมี path ใน urls.py
+                data: { q: request.term },
+                dataType: "json",
+                success: function(data) {
+                    response($.map(data, function(item) {
+                        return {
+                            label: item.staff_code + " - " + item.staff_fname + " " + item.staff_lname, // แสดงรหัส + ชื่อ
+                            value: item.staff_code // เมื่อเลือก ให้เติมรหัสพนักงานในช่อง input
+                        };
+                    }));
+                }
+            });
+        },
+        minLength: 2 // เริ่มค้นหาหลังจากพิมพ์ 2 ตัวอักษร
+    });
+    $("#staff-form").submit(function(event) {
+        event.preventDefault();
+
+        // อ่านค่า Switch (เปิด = enable, ปิด = disable)
+        let checkinStatus = $("#brc_chkin_status").prop("checked") ? "Unrestricted" : "Restricted";
+
+        let formData = $("#staff-form").serializeArray();
+        formData.push({name: "brc_chkin_status", value: checkinStatus});
+
+        Swal.fire({
+            title: "{% if staff %}ยืนยันการอัปเดตพนักงาน?{% else %}ยืนยันการเพิ่มพนักงาน?{% endif %}",
+            text: "คุณต้องการบันทึกข้อมูลพนักงานหรือไม่?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "ยืนยัน",
+            cancelButtonText: "ยกเลิก"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: "{% if staff %}{% url 'edit_staff' staff.staff_id %}{% else %}{% url 'add_staff' %}{% endif %}",
+                    type: "POST",
+                    data: $("#staff-form").serialize(),
+                    success: function(response) {
+                        Swal.fire({
+                            title: "สำเร็จ!",
+                            text: "{% if staff %}อัปเดตข้อมูลพนักงานเรียบร้อยแล้ว{% else %}พนักงานถูกเพิ่มเรียบร้อยแล้ว{% endif %}",
+                            icon: "success",
+                            confirmButtonText: "ตกลง"
+                        }).then(() => {
+                            window.location.href = "{% url 'add_staff' %}";
+                        });
+                    },
+                    error: function(response) {
+                        Swal.fire({
+                            title: "เกิดข้อผิดพลาด!",
+                            text: "ไม่สามารถบันทึกข้อมูลพนักงานได้",
+                            icon: "error",
+                            confirmButtonText: "ตกลง"
+                        });
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

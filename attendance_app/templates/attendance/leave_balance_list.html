@@ -1,0 +1,147 @@
+{% extends "general/base.html" %}
+{% block title %}รายการ Leave Balance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+    <div class="container " style="width: 95%;">
+        <h1 class="text-center">สิทธิ์วันลา</h1>
+
+        {% if messages %}
+            {% for message in messages %}
+                <script>
+                    Swal.fire({
+                        icon: "{% if message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% else %}error{% endif %}",
+                        title: "{{ message }}",
+                        confirmButtonText: "ตกลง"
+                    });
+                </script>
+            {% endfor %}
+        {% endif %}
+
+
+        <!-- Search Form -->
+        <form method="GET" class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">ค้นหาพนักงาน</label>
+                <input type="text" id="search" name="search" class="form-control"
+                       placeholder="กรอกชื่อพนักงานหรือรหัสพนักงาน"
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-2 align-self-end">
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
+            </div>
+        </form>
+
+        <hr>
+
+        <!-- Upload Excel with SweetAlert -->
+        <form id="upload-form" method="POST" enctype="multipart/form-data" action="{% url 'import_leave_balance' %}" class="row g-3 mb-3">
+            {% csrf_token %}
+            <div class="col-md-6">
+                <label class="form-label">อัปโหลดไฟล์ Excel</label>
+                <input type="file" id="excel-file" name="excel_file" class="form-control" accept=".xlsx" required>
+            </div>
+            <div class="col-md-2 align-self-end">
+                <button type="button" id="upload-btn" class="btn btn-success">นำเข้า</button>
+            </div>
+        </form>
+
+        {% if leave_balances %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mt-4">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ชื่อพนักงาน</th>
+                            <th>ประเภทการลา</th>
+                            <th>จำนวนชั่วโมงทั้งหมด</th>
+                            <th>ชั่วโมงที่เหลือ</th>
+                            <th>ดำเนินการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave_balance in leave_balances %}
+                        <tr>
+                            <td>{{ leave_balance.user.first_name }} {{ leave_balance.user.last_name }}</td>
+                            <td>{{ leave_balance.leave_type.th_name }}</td>
+                            <td>{{ leave_balance.total_hours }}</td>
+                            <td>{{ leave_balance.remaining_hours }}</td>
+                            <td>
+                                <button class="btn btn-warning btn-sm edit-leave-balance"
+                                        data-url="{% url 'edit_leave_balance' leave_balance.id %}">
+                                    แก้ไข
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">ไม่พบข้อมูล</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-center text-muted my-5">กรุณาค้นหาพนักงานเพื่อแสดงข้อมูล</p>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    // ✅ อัปโหลดไฟล์ Excel พร้อม SweetAlert
+    document.getElementById("upload-btn").addEventListener("click", function() {
+        const fileInput = document.getElementById("excel-file").files.length;
+
+        if (fileInput === 0) {
+            Swal.fire({
+                title: "กรุณาเลือกไฟล์!",
+                text: "คุณต้องเลือกไฟล์ Excel ก่อนอัปโหลด",
+                icon: "warning",
+                confirmButtonText: "ตกลง"
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: "ยืนยันการอัปโหลด?",
+            text: "คุณต้องการนำเข้าไฟล์ Excel หรือไม่?",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "ยืนยัน",
+            cancelButtonText: "ยกเลิก"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById("upload-form").submit();
+            }
+        });
+    });
+
+    // ✅ แก้ไข Leave Balance ด้วย SweetAlert
+    document.querySelectorAll(".edit-leave-balance").forEach(button => {
+        button.addEventListener("click", function() {
+            const editUrl = this.dataset.url;
+            Swal.fire({
+                title: "แก้ไข Leave Balance?",
+                text: "คุณต้องการแก้ไขข้อมูลนี้หรือไม่?",
+                icon: "info",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "ไปที่หน้าแก้ไข",
+                cancelButtonText: "ยกเลิก"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = editUrl;
+                }
+            });
+        });
+    });
+
+});
+</script>
+{% endblock %}

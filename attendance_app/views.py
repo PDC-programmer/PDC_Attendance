@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.utils import timezone
 
@@ -20,6 +20,10 @@ import csv
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from django.db import transaction
+from django.contrib import messages
+import pandas as pd
+from django.core.files.storage import default_storage
+
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -809,6 +813,11 @@ def shift_schedule_update(request):
         next_year = selected_year if selected_month < 12 else selected_year + 1
         end_date = datetime(next_year, next_month, 20).date()
 
+        already_created_shift_schedule = ShiftSchedule.objects.filter(user=user, date=start_date).exists()
+
+        if already_created_shift_schedule:
+            return JsonResponse({"error": "ไม่สามารถดำเนินการได้ มีช่วงเวลาทำงานที่คุณเลือกอยู่แล้ว !"}, status=400)
+
         is_regular_employee = user.groups.filter(id=1).exists()
         public_holiday_cn = set(PublicHoliday.objects.filter(group="CN").values_list("date", flat=True))
         public_holiday_op = set(PublicHoliday.objects.filter(group="OP").values_list("date", flat=True))
@@ -1111,3 +1120,112 @@ def shift_schedule_batch_approve(request):
             return JsonResponse({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+@login_required(login_url="log-in")
+@user_passes_test(is_staff_check)
+def leave_balance_list(request):
+    search_query = request.GET.get("search", "").strip()
+    leave_balances = None  # ตั้งค่าเริ่มต้นเป็น None
+
+    if search_query:
+        leave_balances = LeaveBalance.objects.filter(
+            user__first_name__icontains=search_query
+        ) | LeaveBalance.objects.filter(
+            user__last_name__icontains=search_query
+        ) | LeaveBalance.objects.filter(
+            user__username__icontains=search_query
+        )
+
+    return render(request, "attendance/leave_balance_list.html", {
+        "leave_balances": leave_balances,
+        "search_query": search_query,
+    })
+
+
+@login_required(login_url="log-in")
+@user_passes_test(is_staff_check)
+def edit_leave_balance(request, leave_balance_id):
+    """ ฟังก์ชันแก้ไข Leave Balance """
+    leave_balance = get_object_or_404(LeaveBalance, id=leave_balance_id)
+
+    if request.method == "POST":
+        total_hours = request.POST.get("total_hours")
+        remaining_hours = request.POST.get("remaining_hours")
+
+        try:
+            leave_balance.total_hours = float(total_hours)
+            leave_balance.remaining_hours = float(remaining_hours)
+            leave_balance.save()
+            messages.success(request, "อัปเดต Leave Balance สำเร็จ!")
+            return redirect("leave_balance_list")
+        except ValueError:
+            messages.error(request, "กรุณากรอกค่าที่ถูกต้อง")
+
+    return render(request, "attendance/edit_leave_balance.html", {
+        "leave_balance": leave_balance
+    })
+
+
+@login_required(login_url="log-in")
+@user_passes_test(is_staff_check)
+def import_leave_balance(request):
+    if request.method == "POST" and request.FILES.get("excel_file"):
+        excel_file = request.FILES["excel_file"]
+        file_path = default_storage.save("temp/" + excel_file.name, excel_file)
+
+        try:
+            df = pd.read_excel(f"media/{file_path}", engine="openpyxl")
+
+            required_columns = {"username", "leave_type", "total_hours", "remaining_hours"}
+            if not required_columns.issubset(df.columns):
+                messages.error(request, "❌ ไฟล์ Excel ต้องมีคอลัมน์: username, leave_type, total_hours, remaining_hours")
+                print("❌ Missing required columns!")
+                return redirect("leave_balance_list")
+
+            imported_count = 0
+            for _, row in df.iterrows():
+                username = str(row["username"]).strip().zfill(5)
+                leave_type_name = str(row["leave_type"]).strip()
+                total_hours = float(row["total_hours"])
+                remaining_hours = float(row["remaining_hours"])
+
+                user = User.objects.filter(username=username).first()
+                if not user:
+                    messages.warning(request, f"⚠️ ไม่พบผู้ใช้ {username}, ข้ามข้อมูลนี้")
+                    print(f"⚠️ ไม่พบผู้ใช้ {username}")
+                    continue
+
+                leave_type = LeaveType.objects.filter(th_name=leave_type_name).first()
+                if not leave_type:
+                    messages.warning(request, f"⚠️ ไม่พบประเภทการลา {leave_type_name}, ข้ามข้อมูลนี้")
+                    print(f"⚠️ ไม่พบประเภทการลา {leave_type_name}")
+                    continue
+
+                leave_balance, created = LeaveBalance.objects.update_or_create(
+                    user=user,
+                    leave_type=leave_type,
+                    defaults={
+                        "total_hours": total_hours,
+                        "remaining_hours": remaining_hours,
+                        "updated_at": datetime.now(),
+                    }
+                )
+                imported_count += 1
+                print(f"✅ อัปเดต Leave Balance สำเร็จ: {username} - {leave_type_name}")
+
+            messages.success(request, f"✅ นำเข้าและอัปเดต Leave Balance สำเร็จ {imported_count} รายการ")
+            print(f"✅ สำเร็จ {imported_count} รายการ")
+        except Exception as e:
+            messages.error(request, f"❌ เกิดข้อผิดพลาด: {str(e)}")
+            print(f"❌ Error: {str(e)}")
+
+        finally:
+            # ✅ ลบไฟล์ออกจากเซิร์ฟเวอร์หลังใช้งาน
+            if default_storage.exists(file_path):
+                default_storage.delete(file_path)
+
+        return redirect("leave_balance_list")
+
+    return redirect("leave_balance_list")
+

@@ -1,0 +1,55 @@
+{% extends "general/base.html" %}
+{% block title %}แก้ไข Leave Balance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+    <div class="container " style="width: 95%;">
+    <h1 class="text-center">แก้ไข Leave Balance</h1>
+
+    <form method="POST" id="leave-balance-form">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label">ชื่อพนักงาน</label>
+            <input type="text" class="form-control" value="{{ leave_balance.user.first_name }} {{ leave_balance.user.last_name }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">ประเภทการลา</label>
+            <input type="text" class="form-control" value="{{ leave_balance.leave_type.th_name }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">จำนวนชั่วโมงทั้งหมด</label>
+            <input type="number" name="total_hours" class="form-control" step="0.1" value="{{ leave_balance.total_hours }}" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">ชั่วโมงที่เหลือ</label>
+            <input type="number" name="remaining_hours" class="form-control" step="0.1" value="{{ leave_balance.remaining_hours }}" required>
+        </div>
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-success">บันทึก</button>
+            <a href="{% url 'leave_balance_list' %}" class="btn btn-secondary">ยกเลิก</a>
+        </div>
+    </form>
+</div>
+</div>
+<!-- ใช้ SweetAlert สำหรับแจ้งเตือน -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.getElementById("leave-balance-form").addEventListener("submit", function(event) {
+    event.preventDefault();
+    Swal.fire({
+        title: "ยืนยันการบันทึก?",
+        text: "คุณต้องการอัปเดต ใช่หรือไม่?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "ยืนยัน",
+        cancelButtonText: "ยกเลิก"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            event.target.submit();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -11,16 +11,24 @@
         <div class="col-md-4">
             <label for="month" class="form-label">เดือน</label>
             <select id="month" name="month" class="form-select form-input">
-                <option value="">เลือกเดือน</option>
-                {% for m in months %}
-                <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>{{ m }}</option>
-                {% endfor %}
+                <option value="1">21 ม.ค - 20 ก.พ. </option>
+                <option value="2">21 ก.พ. - 20 มี.ค. </option>
+                <option value="3">21 มี.ค. - 20 เม.ย. </option>
+                <option value="4">21 เม.ย. - 20 พ.ค. </option>
+                <option value="5">21 พ.ค. - 20 มิ.ย. </option>
+                <option value="6">21 มิ.ย. - 20 ก.ค. </option>
+                <option value="7">21 ก.ค. - 20 ส.ค. </option>
+                <option value="8">21 ส.ค. - 20 ก.ย. </option>
+                <option value="9">21 ก.ย. - 20 ต.ค. </option>
+                <option value="10">21 ต.ค. - 20 พ.ย. </option>
+                <option value="11">21 พ.ย. - 20 ธ.ค. </option>
+                <option value="12">21 ธ.ค. - 20 ม.ค. </option>
             </select>
         </div>
         <div class="col-md-4">
             <label for="year" class="form-label">ปี</label>
             <select id="year" name="year" class="form-select form-input">
-                <option value="">เลือกปี</option>
+
                 {% for y in years %}
                 <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>{{ y }}</option>
                 {% endfor %}

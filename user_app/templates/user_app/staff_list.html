@@ -1,0 +1,113 @@
+{% extends "general/base.html" %}
+{% block title %} รายการพนักงาน {% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+    <div class="container" style="width: 95%;">
+        <h1 class="text-center">รายการพนักงาน</h1>
+
+        <!-- Search & Filter Form -->
+        <form method="GET" class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">ค้นหา</label>
+                <input type="text" id="search" name="search" class="form-control"
+                       placeholder="ค้นหาด้วย รหัสพนักงาน / ชื่อ / นามสกุล"
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <label for="staff_type" class="form-label">ประเภทพนักงาน</label>
+                <select id="staff_type" name="staff_type" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    <option value="Staff" {% if staff_type_filter == "Staff" %}selected{% endif %}>Staff</option>
+                    <option value="Manager" {% if staff_type_filter == "Manager" %}selected{% endif %}>Manager</option>
+                </select>
+            </div>
+            <div class="col-md-2 align-self-end">
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
+            </div>
+        </form>
+
+        <hr>
+
+        <div class="text-end">
+            <a href="{% url 'add_staff' %}" class="btn btn-primary btn-sm col-sm-1">+ พนักงาน</a>
+        </div>
+
+        {% if search_query or staff_type_filter %}
+        <!-- Staff Table -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover mt-4">
+                <thead class="table-light">
+                    <tr>
+                        <th>รหัสพนักงาน</th>
+                        <th>ชื่อ</th>
+                        <th>นามสกุล</th>
+                        <th>ตำแหน่ง</th>
+                        <th>แผนก</th>
+                        <th>ประเภทพนักงาน</th>
+                        <th>วันที่เริ่มงาน</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in page_obj %}
+                    <tr class="clickable-row" data-href="{% url 'edit_staff' staff.staff_id %}">
+                        <td>{{ staff.staff_code }}</td>
+                        <td>{{ staff.staff_fname }}</td>
+                        <td>{{ staff.staff_lname }}</td>
+                        <td>{{ staff.staff_title }}</td>
+                        <td>{{ staff.staff_department }}</td>
+                        <td>
+                            {% if staff.staff_type == "Manager" %}
+                                <span class="badge bg-success">Manager</span>
+                            {% else %}
+                                <span class="badge bg-primary">Staff</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ staff.date_of_start|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">ไม่พบข้อมูลพนักงาน</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <nav>
+            <ul class="pagination justify-content-center my-3">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&staff_type={{ staff_type_filter }}">&laquo;</a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item disabled">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&staff_type={{ staff_type_filter }}">&raquo;</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+
+        {% else %}
+            <p class="text-center text-muted">กรุณากรอกข้อมูลเพื่อค้นหาพนักงาน</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll(".clickable-row").forEach(row => {
+        row.addEventListener("click", function() {
+            window.location.href = this.dataset.href;
+        });
+    });
+});
+</script>
+{% endblock %}
