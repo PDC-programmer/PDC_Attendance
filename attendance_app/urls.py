@@ -25,4 +25,8 @@ urlpatterns = [
     path("shift-schedule-approve/", views.shift_schedule_approve, name="shift_schedule_approve"),
     path("shift-schedule-batch-approve/", views.shift_schedule_batch_approve, name="shift_schedule_batch_approve"),
 
+    path("leave-balance/", views.leave_balance_list, name="leave_balance_list"),
+    path("leave-balance/edit/<int:leave_balance_id>/", views.edit_leave_balance, name="edit_leave_balance"),
+    path("leave-balance/import/", views.import_leave_balance, name="import_leave_balance"),
+
 ]

@@ -23,6 +23,12 @@ LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
 LINE_LOG_IN_CHANNEL_SECRET = os.getenv('LINE_LOG_IN_CHANNEL_SECRET')
 
+SOURCE_DB_NAME = os.getenv('SOURCE_DB_NAME')
+SOURCE_DB_USER = os.getenv('SOURCE_DB_USER')
+SOURCE_DB_PASSWORD = os.getenv('SOURCE_DB_PASSWORD')
+SOURCE_DB_HOST = os.getenv('SOURCE_DB_HOST')
+SOURCE_DB_PORT = os.getenv('SOURCE_DB_PORT')
+
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -81,7 +87,6 @@ INSTALLED_APPS = [
 ]
 
 SOCIALACCOUNT_ADAPTER = "line_app.adapters.CustomSocialAccountAdapter"
-
 
 MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
