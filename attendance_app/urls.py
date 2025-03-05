@@ -2,7 +2,6 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('leave-request/', views.leave_request_view, name='leave_request'),
     path('leave-request-auth/', views.leave_request_view_auth, name='leave_request_auth'),
     path('get-leave-types/', views.get_leave_types, name='get_leave_types'),
     path('get-leave-balances/', views.get_leave_balances, name='get_leave_balances'),

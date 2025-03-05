@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from user_app.models import User, BsnStaff
 from attendance_app.models import *
+from approval_app.models import *
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.conf import settings
@@ -121,137 +122,6 @@ def get_leave_attendances(request):
     return JsonResponse(data, safe=False)
 
 
-@csrf_exempt
-def leave_request_view(request):
-    if request.method == "POST":
-        # ตรวจสอบการส่งข้อมูลแบบ FormData
-        data = request.POST
-        image = request.FILES.get("image")
-
-        user_id = data.get("userID")
-        start_date = data.get("startDate")
-        end_date = data.get("endDate")
-        reason = data.get("reason")
-        leave_type_id = data.get("type")
-
-        days = (datetime.strptime(end_date, "%Y-%m-%d") - datetime.strptime(start_date, "%Y-%m-%d")).days + 1
-
-        # ตรวจสอบว่าประเภทการลามีอยู่ในระบบ
-        leave_type = LeaveType.objects.filter(id=leave_type_id).first()
-        if not leave_type:
-            return JsonResponse({"error": "ประเภทวันลาไม่ถูกต้อง !"}, status=400)
-
-        # ค้นหา User ที่มี UID ตรงกับ userID
-        user = User.objects.filter(uid=user_id).first()
-        if not user:
-            return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ !"}, status=404)
-
-        leave_balance = LeaveBalance.objects.filter(user=user, leave_type=leave_type_id).first()
-        if not leave_balance:
-            return JsonResponse({"error": "ไม่พบข้อมูสิทธิ์วันลาคงเหลือ !"}, status=404)
-
-        if not leave_balance.remaining_days >= days:
-            return JsonResponse({"error": f"{leave_type.th_name}เหลือไม่เพียงพอ !"}, status=404)
-
-        # ค้นหาผู้อนุมัติจากตาราง BsnStaff
-        staff = BsnStaff.objects.filter(django_usr_id=user).first()
-        if not staff or not staff.mng_staff_id:
-            return JsonResponse({"error": "ไม่พบผู้อนุมัติของพนักงาน !"}, status=404)
-
-        approver = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
-        approver_user = User.objects.filter(id=approver.django_usr_id.id).first()
-        if not approver_user:
-            return JsonResponse({"error": "ไม่พบผู้อนุมัติ !"}, status=404)
-
-        # สร้าง LeaveAttendance
-        leave_record = LeaveAttendance.objects.create(
-            user=user,
-            approve_user=approver_user,
-            start_date=start_date,
-            end_date=end_date,
-            reason=reason,
-            leave_type=leave_type,
-            image=image,
-        )
-
-        # ส่ง Template Message ถึง Approver
-        if approver_user.uid:
-            user_fullname = f"{staff.staff_fname} {staff.staff_lname}" if staff.staff_fname and staff.staff_lname else user.username
-            approver_fullname = f"{approver.staff_fname} {approver.staff_lname}" if approver.staff_fname and approver.staff_lname else approver_user.username
-
-            try:
-                line_bot_api.push_message(
-                    approver_user.uid,
-                    TemplateSendMessage(
-                        alt_text=f"คำขอการลาของ {user_fullname}",
-                        template=ButtonsTemplate(
-                            # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
-                            # Add image URL here
-                            title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
-                            text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
-                            actions=[
-                                PostbackAction(
-                                    label="อนุมัติ",
-                                    display_text=f"อนุมัติคำขอการลารหัส: {leave_record.id}",
-                                    data=f"action=approve&leave_id={leave_record.id}"
-                                ),
-                                PostbackAction(
-                                    label="ปฏิเสธ",
-                                    display_text=f"ปฏิเสธคำขอการลารหัส: {leave_record.id}",
-                                    data=f"action=reject&leave_id={leave_record.id}"
-                                ),
-                                URIAction(
-                                    label="ดูรายละเอียด",
-                                    uri=f"https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-request-detail/{leave_record.id}/"
-                                ),
-                            ]
-                        )
-                    )
-                )
-            except Exception as e:
-                return JsonResponse({"error": f"Failed to send message: {str(e)}"}, status=500)
-
-            if not user:
-                return JsonResponse({"error": "ไม่พบข้อมูผู้ใช้งานในระบบ"}, status=404)
-            else:
-                try:
-                    line_bot_api.push_message(
-                        user_id,
-                        TemplateSendMessage(
-                            alt_text=f"คำขอการลาของ {user_fullname}",
-                            template=ButtonsTemplate(
-                                # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
-                                # Add image URL here
-                                title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
-                                text=f"ประเภท: {leave_type.th_name}\nวัน: {start_date} - {end_date}\nคงเหลือ: {leave_balance.remaining_days}",
-                                actions=[
-                                    PostbackAction(
-                                        label="ยกเลิก",
-                                        display_text=f"ยกเลิกคำขอการลารหัส: {leave_record.id}",
-                                        data=f"action=cancel&leave_id={leave_record.id}"
-                                    ),
-                                    URIAction(
-                                        label="ดูรายละเอียด",
-                                        uri=f"https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-request-detail/{leave_record.id}/"
-                                    ),
-                                ]
-                            )
-                        )
-                    )
-                except Exception as e:
-                    return JsonResponse({"error": f"Failed to send message: {str(e)}"}, status=500)
-                # line_bot_api.push_message(
-                #     user_id,
-                #     TextSendMessage(
-                #         text=f"คำขอการลา: {leave_record.id}\nกำลังรอการพิจารณา\nผู้อนุมัติ: {approver_fullname}"
-                #     )
-                # )
-
-        return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
-
-    return render(request, "attendance/leave_request.html")
-
-
 @login_required(login_url='log-in')
 @csrf_exempt
 def leave_request_view_auth(request):
@@ -276,7 +146,7 @@ def leave_request_view_auth(request):
         # Calculate working hours based on shifts
         working_hours = calculate_working_hours(user, start_datetime, end_datetime)
         if working_hours <= 0:
-            return JsonResponse({"error": "ช่วงเวลาที่เลือกไม่ได้อยู่ในเวลาทำงาน"}, status=400)
+            return JsonResponse({"error": "ช่วงเวลาที่เลือกไม่ได้อยู่ในเวลาทำงาน กรุณาเลือกเวลาทำงานของคุณก่อนทำการลา !"}, status=400)
 
         # ตรวจสอบว่าประเภทการลามีอยู่ในระบบ
         leave_type = LeaveType.objects.filter(id=leave_type_id).first()
@@ -301,6 +171,13 @@ def leave_request_view_auth(request):
         if not approver_user:
             return JsonResponse({"error": "ไม่พบผู้อนุมัติ !"}, status=404)
 
+        created_leave_attendance = LeaveAttendance.objects.filter(user=user)
+
+        is_already_created = created_leave_attendance.filter(start_datetime__date=start_datetime.date()).exists()
+
+        if is_already_created:
+            return JsonResponse({"error": "พบวันลาที่ตรงกับการลาครั้งนี้ !"}, status=404)
+
         # สร้าง LeaveAttendance
         leave_record = LeaveAttendance.objects.create(
             user=user,
@@ -310,6 +187,21 @@ def leave_request_view_auth(request):
             reason=reason,
             leave_type=leave_type,
             image=image,
+        )
+
+        # สร้าง Approval
+        approval_record = Approval.objects.create(
+            leave_attendance=leave_record,
+            request_user=user,
+            approve_user=approver_user.user,
+            start_datetime=start_datetime,
+            end_datetime=end_datetime,
+            reason=reason,
+            leave_type=leave_type,
+            image=image,
+            approval_type="leave",
+            status="pending",
+            created_at=now()
         )
 
         # ส่ง Template Message ถึง Approver
@@ -325,18 +217,18 @@ def leave_request_view_auth(request):
                         template=ButtonsTemplate(
                             # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
                             # Add image URL here
-                            title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
+                            title=f"คำขอการลาของ {user_fullname}: {approval_record.id}",
                             text=f"{datetime.date(start_datetime).strftime("%d/%m/%y")} - {datetime.date(end_datetime).strftime("%d/%m/%y")}\n{leave_type.th_name}\nเหลือ: {leave_balance.remaining_hours // 8} วัน",
                             actions=[
                                 PostbackAction(
                                     label="อนุมัติ",
-                                    display_text=f"อนุมัติคำขอการลารหัส: {leave_record.id}",
-                                    data=f"action=approve&leave_id={leave_record.id}"
+                                    display_text=f"อนุมัติคำขอการลารหัส: {approval_record.id}",
+                                    data=f"action=approve&approval_id={approval_record.id}&approval_type=leave"
                                 ),
                                 PostbackAction(
                                     label="ปฏิเสธ",
-                                    display_text=f"ปฏิเสธคำขอการลารหัส: {leave_record.id}",
-                                    data=f"action=reject&leave_id={leave_record.id}"
+                                    display_text=f"ปฏิเสธคำขอการลารหัส: {approval_record.id}",
+                                    data=f"action=reject&approval_id={approval_record.id}&approval_type=leave"
                                 ),
                                 URIAction(
                                     label="ดูรายละเอียด",
@@ -360,13 +252,13 @@ def leave_request_view_auth(request):
                             template=ButtonsTemplate(
                                 # thumbnail_image_url=leave_record.image.url if leave_record.image else None,
                                 # Add image URL here
-                                title=f"คำขอการลาของ {user_fullname}: {leave_record.id}",
+                                title=f"คำขอการลาของ {user_fullname}: {approval_record.id}",
                                 text=f"{datetime.date(start_datetime).strftime("%d/%m/%y")} - {datetime.date(end_datetime).strftime("%d/%m/%y")}\n{leave_type.th_name}\nเหลือ: {leave_balance.remaining_hours // 8} วัน",
                                 actions=[
                                     PostbackAction(
                                         label="ยกเลิก",
-                                        display_text=f"ยกเลิกคำขอการลารหัส: {leave_record.id}",
-                                        data=f"action=cancel&leave_id={leave_record.id}"
+                                        display_text=f"ยกเลิกคำขอการลารหัส: {approval_record.id}",
+                                        data=f"action=cancel&approval_id={approval_record.id}&approval_type=leave"
                                     ),
                                     URIAction(
                                         label="ดูรายละเอียด",
@@ -398,15 +290,16 @@ def leave_request_view_auth(request):
 def leave_request_detail(request, leave_id):
     # Fetch LeaveAttendance object
     leave_request = get_object_or_404(LeaveAttendance, id=leave_id)
+    approval = Approval.objects.filter(leave_attendance=leave_request.id).first()
 
     # Calculate working hours only
-    total_duration = calculate_working_hours(leave_request.user, leave_request.start_datetime, leave_request.end_datetime)
+    total_duration = calculate_working_hours(approval.request_user, approval.start_datetime, approval.end_datetime)
     leave_hours = f"{total_duration // 8:.0f} วัน" if total_duration >= 8 else f"{total_duration:.1f} ชม."
-    staff = BsnStaff.objects.filter(django_usr_id=leave_request.user.id).first()
-    approver = BsnStaff.objects.filter(django_usr_id=leave_request.approve_user.id).first()
+    staff = BsnStaff.objects.filter(django_usr_id=approval.request_user.id).first()
+    approver = BsnStaff.objects.filter(django_usr_id=approval.approve_user.id).first()
 
     # Verify that the logged-in user is either the approver or the requester
-    if request.user != leave_request.approve_user and request.user != leave_request.user:
+    if request.user != approval.approve_user and request.user != approval.request_user:
         return HttpResponseForbidden("คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้ !")
 
     if request.method == "POST":
@@ -414,41 +307,36 @@ def leave_request_detail(request, leave_id):
 
         # Deduct leave balance
         leave_balance = LeaveBalance.objects.filter(
-            user=leave_request.user, leave_type=leave_request.leave_type
+            user=approval.request_user, leave_type=approval.leave_type
         ).first()
 
-        if action == "approve" and request.user == leave_request.approve_user:
-            if leave_request.status != "approved":
-                leave_request.status = "approved"
-                leave_request.updated_at = now()
-                leave_balance.updated_at = now()
-                leave_balance.save()
-                leave_request.save()
+        if action == "approve" and request.user == approval.approve_user:
+            if approval.status != "approved":
+                approval.status = "approved"
+                approval.updated_at = now()
+                approval.save()
+
                 return JsonResponse({"message": "อนุมัติคำขออนุมัติเสร็จสิ้น"}, status=200)
             else:
                 return JsonResponse({"error": "อนุมัติคำขออนุมัติแล้ว"}, status=400)
 
-        elif action == "reject" and request.user == leave_request.approve_user:
-            if leave_request.status != "rejected":
-                leave_request.status = "rejected"
-                leave_request.updated_at = now()
-                leave_balance.updated_at = now()
-                leave_balance.save()
-                leave_request.save()
+        elif action == "reject" and request.user == approval.approve_user:
+            if approval.status != "rejected":
+                approval.status = "rejected"
+                approval.updated_at = now()
+                approval.save()
                 return JsonResponse({"message": "ปฏิเสธคำขออนุมัติเสร็จสิ้น"}, status=200)
             else:
                 return JsonResponse({"error": "ปฏิเสธคำขออนุมัติแล้ว"}, status=400)
 
-        elif action == "cancel" and request.user == leave_request.user:
-            if leave_request.start_datetime < now():
+        elif action == "cancel" and request.user == approval.request_user:
+            if approval.start_datetime < now():
                 return JsonResponse({"error": "ไม่สามารถยกเลิกคำขออนุมัติที่ผ่านมาแล้วได้ !"}, status=400)
 
-            if leave_request.status in ["pending", "approved"]:
-                leave_request.status = "cancelled"
-                leave_request.updated_at = now()
-                leave_balance.updated_at = now()
-                leave_balance.save()
-                leave_request.save()
+            if approval.status in ["pending", "approved"]:
+                approval.status = "cancelled"
+                approval.updated_at = now()
+                approval.save()
                 return JsonResponse({"message": "ยกเลิกคำขออนุมัติเสร็จสิ้น"}, status=200)
             else:
                 return JsonResponse({"error": "ไม่สามารถยกเลิกคำขออนุมัตินี้ได้"}, status=400)
@@ -854,8 +742,7 @@ def shift_schedule_update(request):
                     date=current_date,
                     shift_day=shift_day,
                     shift=selected_shift,
-                    status="approved",
-                    approve_user=approver_user
+                    status="approved"
                 ))
 
             current_date += timedelta(days=1)
@@ -872,72 +759,8 @@ def shift_schedule_update(request):
     return render(request, "attendance/shift_schedule_update.html", {
         "shifts": shifts,
         "months": range(1, 13),
-        "years": range(2025, 2031),
+        "years": range(2025, 2027),
     })
-
-
-# @login_required(login_url='log-in')
-# def shift_schedule_update(request):
-#     if request.method == "POST":
-#         selected_month = int(request.POST.get("month"))
-#         selected_year = int(request.POST.get("year"))
-#         selected_shift_id = request.POST.get("shift")
-#
-#         user = request.user
-#         staff = BsnStaff.objects.filter(django_usr_id=user).first()
-#         approver_person = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
-#         approver_user = User.objects.filter(id=approver_person.django_usr_id.id).first()
-#
-#         # ดึง Shift ที่เลือก
-#         selected_shift = Shift.objects.get(id=selected_shift_id)
-#
-#         # คำนวณช่วงวันที่เริ่มต้นและสิ้นสุด (21 ของเดือนที่เลือก - 20 ของเดือนถัดไป)
-#         start_date = datetime(selected_year, selected_month, 21).date()
-#         next_month = selected_month + 1 if selected_month < 12 else 1
-#         next_year = selected_year if selected_month < 12 else selected_year + 1
-#         end_date = datetime(next_year, next_month, 20).date()
-#
-#         # ตรวจสอบว่าผู้ใช้เป็นพนักงานกลุ่ม 1 (ต้องใส่วันหยุดวันเสาร์-อาทิตย์)
-#         is_regular_employee = user.groups.filter(id=1).exists()
-#         public_holiday_cn = PublicHoliday.objects.filter(group="CN")
-#         public_holiday_op = PublicHoliday.objects.filter(group="OP")
-#
-#         # วนลูปสร้าง/อัปเดตกะของพนักงาน
-#         current_date = start_date
-#         while current_date <= end_date:
-#             shift_day = "working_day"
-#
-#             if is_regular_employee:
-#                 if public_holiday_cn.filter(date=current_date):
-#                     shift_day = "public_holiday"
-#                 # ถ้าผู้ใช้เป็นพนักงานกลุ่ม 1 ให้ใส่วันหยุดวันเสาร์-อาทิตย์
-#                 if current_date.weekday() in [5, 6]:
-#                     shift_day = "day_off"
-#             else:
-#                 if public_holiday_op.filter(date=current_date):
-#                     shift_day = "public_holiday"
-#
-#             # ใช้ update_or_create แทนที่จะลบและสร้างใหม่
-#             ShiftSchedule.objects.update_or_create(
-#                 user=user,
-#                 date=current_date,
-#                 shift_day=shift_day,
-#                 defaults={"shift": selected_shift,
-#                           "status": "approved",
-#                           "approve_user": approver_user,
-#                           }
-#             )
-#
-#             current_date += timedelta(days=1)
-#
-#         return JsonResponse({"message": "อัปเดตตารางกะสำเร็จแล้ว"}, status=200)
-#
-#     shifts = Shift.objects.all()
-#     return render(request, "attendance/shift_schedule_update.html", {
-#         "shifts": shifts,
-#         "months": range(1, 13),
-#         "years": range(2025, 2031),
-#     })
 
 
 @login_required(login_url='log-in')
@@ -988,7 +811,6 @@ def shift_schedule_view(request):
     })
 
 
-
 @login_required(login_url='log-in')
 def shift_schedule_bulk_update(request):
     if request.method == "POST":
@@ -1000,17 +822,24 @@ def shift_schedule_bulk_update(request):
         approver_user = User.objects.filter(id=approver_person.django_usr_id.id).first()
 
         for schedule_id, update in updates.items():
-            schedule = ShiftSchedule.objects.filter(id=schedule_id, user=user).first()
+            # ดึง instance ของ ShiftSchedule
+            shift_schedule_instance = ShiftSchedule.objects.filter(id=schedule_id).first()
+            if not shift_schedule_instance:
+                continue  # ถ้าไม่พบ shift schedule ให้ข้ามไป
 
-            if schedule:
-                schedule.shift_id = update["shift"]
-                schedule.shift_day = update["shift_day"]
-                schedule.approver_user = approver_user
-                schedule.status = "pending"
-                schedule.updated_at = timezone.now()
-                schedule.save()
+            approval = Approval.objects.create(
+                shift_schedule=shift_schedule_instance,  # ใช้ instance แทนค่า ID
+                request_user=user,
+                approve_user=approver_user,
+                approval_type="shift",
+                shift_id=update["shift"],  # ใช้ shift_id ที่ถูกต้อง
+                date=shift_schedule_instance.date,
+                shift_day=update["shift_day"],
+                status="pending",
+                created_at=timezone.now()
+            )
 
-        return JsonResponse({"message": "อัปเดตกะสำเร็จแล้ว"}, status=200)
+        return JsonResponse({"message": "ส่งคำขอแก้ไขกะสำเร็จแล้ว"}, status=200)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 
