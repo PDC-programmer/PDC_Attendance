@@ -23,12 +23,6 @@ from allauth.socialaccount.models import SocialAccount
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(settings.LINE_CHANNEL_SECRET)
 
-# Mapping for leave type display names
-STATUS_DISPLAY = {
-    'approved': 'อนุมัติ',
-    'rejected': 'ปฏิเสธ',
-}
-
 
 @login_required(login_url='log-in')
 @csrf_exempt
@@ -67,7 +61,16 @@ def register_line_id(request):
             # ค้นหา LeaveBalanceInitial ตาม staff_code
             leave_balances_initial = LeaveBalanceInitial.objects.filter(staff_code=staff_code)
             if not leave_balances_initial.exists():
-                return JsonResponse({"error": "No leave balance found for staff"}, status=404)
+                leave_type_list = [2,4]
+                for leave_type in leave_type_list:
+                    LeaveBalance.objects.create(
+                        user=user,
+                        leave_type=leave_type,
+                        defaults={
+                            "total_hours": 240,
+                            "remaining_hours": 240,
+                        }
+                    )
 
             # บันทึกข้อมูลใน LeaveBalance
             for initial_balance in leave_balances_initial:
@@ -91,30 +94,6 @@ def register_line_id(request):
             return JsonResponse({"error": f"An error occurred: {str(e)}"}, status=500)
 
     return render(request, 'line_app/register_line_id.html')
-
-
-@csrf_exempt
-def register(request):
-    if request.method == "POST":
-        data = json.loads(request.body)
-        user_id = data.get("userID")
-        staff_code = data.get("staffCode")
-
-        # ค้นหาผู้อนุมัติจากตาราง BsnStaff
-        staff = BsnStaff.objects.filter(staff_code=staff_code).first()
-        if not staff:
-            return JsonResponse({"error": "Staff not found"}, status=404)
-
-        django_usr_id = User.objects.filter(id=staff.django_usr_id.id).first()
-        if not django_usr_id:
-            return JsonResponse({"error": "User not found"}, status=404)
-        else:
-            user = User.objects.get(id=django_usr_id.id)
-            user.uid = user_id
-            user.save()
-            return JsonResponse({"success": True, "message": "Registration successful."}, status=200)
-
-    return render(request, 'line_app/register.html')
 
 
 def get_staff_info(request, staff_code):
@@ -181,15 +160,16 @@ def handle_postback(event):
         # Parse the postback data
         postback_data = dict(item.split('=') for item in data.split('&'))
         action = postback_data.get('action')
-        leave_id = postback_data.get('leave_id')
+        approval_id = postback_data.get('approval_id')
+        approval_type = postback_data.get('approval_type')
 
-        if not leave_id:
+        if not approval_id:
             print("ไม่พบรหัสคำขอการลา !")
             return
 
         # Retrieve the LeaveAttendance record
-        leave_record = LeaveAttendance.objects.filter(id=leave_id).first()
-        if not leave_record:
+        approval_record = LeaveAttendance.objects.filter(id=approval_id).first()
+        if not approval_record:
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text="ไม่พบรหัสคำขอการลา !")
@@ -197,7 +177,7 @@ def handle_postback(event):
             return
 
         # Check if already approved or rejected
-        if leave_record.status in ["cancelled"]:
+        if approval_record.status in ["cancelled"]:
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text="ไม่สามารถทำรายการได้ คำขออนุมัตินี้ยกเลิกไปแล้ว !")
@@ -205,7 +185,7 @@ def handle_postback(event):
 
             return
 
-        elif leave_record.status in ["rejected"] and action in ["cancel"]:
+        elif approval_record.status in ["rejected"] and action in ["cancel"]:
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text="ไม่สามารถยกเลิกได้ มีการพิจารณาคำขอการลานี้ไปแล้ว !")
@@ -213,7 +193,7 @@ def handle_postback(event):
 
             return
 
-        elif leave_record.status in ["approved", "rejected"] and action in ["approve", "reject"]:
+        elif approval_record.status in ["approved", "rejected"] and action in ["approve", "reject"]:
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text="ไม่สามารถทำซ้ำได้ มีการพิจารณาคำขอการลานี้ไปแล้ว !")
@@ -223,13 +203,13 @@ def handle_postback(event):
 
         # Process the approval or rejection
         if action == "approve":
-            leave_record.status = "approved"
+            approval_record.status = "approved"
             response_message = "อนุมัติคำขอการลาเสร็จสิ้น !"
         elif action == "reject":
-            leave_record.status = "rejected"
+            approval_record.status = "rejected"
             response_message = "ปฏิเสธคำขอการลาเสร็จสิ้น !"
         elif action == "cancel":
-            leave_record.status = "cancelled"
+            approval_record.status = "cancelled"
             response_message = "ยกเลิกคำขอการลาเสร็จสิ้น !"
         else:
             line_bot_api.reply_message(
@@ -237,10 +217,8 @@ def handle_postback(event):
                 TextSendMessage(text="Unknown action.")
             )
             return
-        leave_record.updated_at = now()
-        leave_record.save()
-
-        status_display = STATUS_DISPLAY.get(leave_record.status, "Unknown Status")
+        approval_record.updated_at = now()
+        approval_record.save()
 
         # Send confirmation message to approver
         line_bot_api.reply_message(
@@ -249,12 +227,12 @@ def handle_postback(event):
         )
 
         # Optionally notify the requester
-        social_account = SocialAccount.objects.filter(user=leave_record.user, provider="line").first()
+        social_account = SocialAccount.objects.filter(user=approval_record.request_user, provider="line").first()
         requester_line_id = social_account.uid if social_account else None
         if requester_line_id and action in ["approve", "reject"]:
             line_bot_api.push_message(
                 requester_line_id,
-                TextSendMessage(text=f"คำขอการลาของคุณได้รับการ {leave_record.get_status_display()} !")
+                TextSendMessage(text=f"คำขอการลาของคุณได้รับการ {approval_record.get_status_display()} !")
             )
     except Exception as e:
         print(f"Error in handle_postback: {e}")

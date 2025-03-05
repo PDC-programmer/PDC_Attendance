@@ -1,0 +1,135 @@
+{% extends "general/base.html" %}
+{% block title %}รายการคำขออนุมัติ{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+    <div class="container " style="width: 95%;">
+        <h1 class="text-center">รายการคำขออนุมัติ</h1>
+
+        <!-- Search & Filter Form -->
+        <form method="GET" class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">ค้นหา</label>
+                <input type="text" id="search" name="search" class="form-control"
+                    placeholder="ค้นหาด้วยชื่อผู้ขอ หรือ รหัสพนักงานผู้ขอ" value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <label for="approval_type" class="form-label">ประเภทคำขอ</label>
+                <select id="approval_type" name="approval_type" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    <option value="leave" {% if approval_type_filter == "leave" %}selected{% endif %}>ขอลา</option>
+                    <option value="shift" {% if approval_type_filter == "shift" %}selected{% endif %}>เปลี่ยนกะ</option>
+                </select>
+            </div>
+            <div class="col-md-2 align-self-end">
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
+            </div>
+        </form>
+
+        <hr>
+
+        {% if approvals %}
+            <div class="text-start mb-2">
+                <button id="approve-selected" class="btn btn-success btn-sm">อนุมัติที่เลือก</button>
+                <button id="reject-selected" class="btn btn-danger btn-sm">ปฏิเสธที่เลือก</button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mt-4">
+                    <thead class="table-light">
+                        <tr>
+                            <th><input type="checkbox" id="select-all"></th>
+                            <th>ผู้ขอ</th>
+                            <th>ประเภทคำขอ</th>
+                            <th>วันที่</th>
+                            <th>สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for approval in approvals %}
+                        <tr>
+                            <td><input type="checkbox" class="approve-checkbox" value="{{ approval.id }}"></td>
+                            <td>{{ approval.request_user.first_name }} {{ approval.request_user.last_name }}</td>
+                            <td>
+                                {% if approval.approval_type == "leave" %}
+                                    <span class="badge bg-info">ขอลา</span>
+                                {% elif approval.approval_type == "shift" %}
+                                    <span class="badge bg-warning">เปลี่ยนกะ</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ approval.date|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if approval.status == "pending" %}
+                                    <span class="badge bg-secondary">รออนุมัติ</span>
+                                {% elif approval.status == "approved" %}
+                                    <span class="badge bg-success">อนุมัติ</span>
+                                {% else %}
+                                    <span class="badge bg-danger">ปฏิเสธ</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-center text-muted mt-4">ไม่พบคำขอที่ตรงกับเงื่อนไข</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ✅ SweetAlert & jQuery -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+$(document).ready(function () {
+    $("#select-all").change(function () {
+        $(".approve-checkbox").prop("checked", $(this).prop("checked"));
+    });
+
+    function processApprovals(action) {
+        let selected = $(".approve-checkbox:checked").map(function() {
+            return $(this).val();
+        }).get();
+
+        if (selected.length === 0) {
+            Swal.fire("แจ้งเตือน", "กรุณาเลือกคำขอที่ต้องการดำเนินการ", "warning");
+            return;
+        }
+
+        Swal.fire({
+            title: `คุณแน่ใจหรือไม่ว่าต้องการ ${action === "approved" ? "อนุมัติ" : "ปฏิเสธ"} คำขอที่เลือก?`,
+            text: "คุณจะไม่สามารถย้อนกลับได้!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "ยืนยัน",
+            cancelButtonText: "ยกเลิก"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: "/approval/bulk-update/",
+                    method: "POST",
+                    headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                    data: JSON.stringify({ approval_ids: selected, action: action }),
+                    contentType: "application/json",
+                    success: function (response) {
+                        Swal.fire("สำเร็จ!", "คำขอได้รับการอัปเดตแล้ว", "success").then(() => {
+                            location.reload();
+                        });
+                    },
+                    error: function () {
+                        Swal.fire("เกิดข้อผิดพลาด!", "ไม่สามารถดำเนินการได้", "error");
+                    }
+                });
+            }
+        });
+    }
+
+    $("#approve-selected").click(() => processApprovals("approved"));
+    $("#reject-selected").click(() => processApprovals("rejected"));
+});
+</script>
+{% endblock %}

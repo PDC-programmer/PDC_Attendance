@@ -1,5 +1,7 @@
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
+from django.utils.timezone import now
+
 from .models import LeaveAttendance, LeaveBalance, ShiftSchedule
 from datetime import datetime
 from attendance_app.utils import calculate_working_hours  # Import the utility function
@@ -37,6 +39,7 @@ def update_leave_balance(sender, instance, **kwargs):
             if leave_balance.remaining_hours >= working_hours:
                 # หักจำนวนวันเมื่อสถานะเปลี่ยนเป็น approved
                 leave_balance.remaining_hours -= working_hours
+                leave_balance.updated_at = now()
                 leave_balance.save()
             else:
                 raise ValueError("Remaining leave days are insufficient.")
@@ -45,4 +48,5 @@ def update_leave_balance(sender, instance, **kwargs):
         if leave_balance:
             # คืนจำนวนวันเมื่อยกเลิก (เฉพาะที่เคยอนุมัติแล้วเท่านั้น)
             leave_balance.remaining_hours += working_hours
+            leave_balance.updated_at = now()
             leave_balance.save()
