@@ -5,6 +5,7 @@ from allauth.socialaccount.models import SocialAccount
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from attendance_app.models import LeaveAttendance
 from user_app.models import User
+from approval_app.models import Approval
 
 
 # Create your views here.
@@ -26,13 +27,13 @@ def home(request):
 
 @login_required
 def get_pending_leave_attendances(request):
-    requester_leave_attendances = LeaveAttendance.objects.filter(user=request.user, status="pending")
+    requester_approval = Approval.objects.filter(request_user=request.user, status="pending")
     # if not User.objects.filter(username=request.user, groups=3).exists():
     #     approver_pending = 0
-    approver_leave_attendances = LeaveAttendance.objects.filter(approve_user=request.user, status="pending")
+    approver_approval = Approval.objects.filter(approve_user=request.user, status="pending")
 
-    requester_pending = requester_leave_attendances.count()
-    approver_pending = approver_leave_attendances.count()
+    requester_pending = requester_approval.count()
+    approver_pending = approver_approval.count()
     return JsonResponse({
         "requester_pending": requester_pending,
         "approver_pending": approver_pending,

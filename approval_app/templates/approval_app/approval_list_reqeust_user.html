@@ -8,17 +8,22 @@
 
         <!-- Search & Filter Form -->
         <form method="GET" class="row g-3 mb-3">
-            <div class="col-md-4">
-                <label for="search" class="form-label">ค้นหา</label>
-                <input type="text" id="search" name="search" class="form-control"
-                    placeholder="ค้นหาด้วยชื่อ หรือ รหัสพนักงาน" value="{{ search_query }}">
-            </div>
             <div class="col-md-3">
                 <label for="approval_type" class="form-label">ประเภทคำขอ</label>
                 <select id="approval_type" name="approval_type" class="form-select">
                     <option value="">ทั้งหมด</option>
                     <option value="leave" {% if approval_type_filter == "leave" %}selected{% endif %}>ขอลา</option>
                     <option value="shift" {% if approval_type_filter == "shift" %}selected{% endif %}>เปลี่ยนกะ</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">สถานะ</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    <option value="pending" {% if status == "pending" %}selected{% endif %}>รออนุมัติ</option>
+                    <option value="approved" {% if status == "approved" %}selected{% endif %}>อนุมัติ</option>
+                    <option value="rejectd" {% if status == "rejectd" %}selected{% endif %}>ปฏิเสธ</option>
+                    <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>ยกเลิก</option>
                 </select>
             </div>
             <div class="col-md-2 align-self-end">

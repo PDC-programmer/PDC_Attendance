@@ -21,6 +21,16 @@
                     <option value="shift" {% if approval_type_filter == "shift" %}selected{% endif %}>เปลี่ยนกะ</option>
                 </select>
             </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">สถานะ</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    <option value="pending" {% if status == "pending" %}selected{% endif %}>รออนุมัติ</option>
+                    <option value="approved" {% if status == "approved" %}selected{% endif %}>อนุมัติ</option>
+                    <option value="rejectd" {% if status == "rejectd" %}selected{% endif %}>ปฏิเสธ</option>
+                    <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>ยกเลิก</option>
+                </select>
+            </div>
             <div class="col-md-2 align-self-end">
                 <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
@@ -85,6 +95,8 @@
                                     <span class="badge bg-secondary">รออนุมัติ</span>
                                 {% elif approval.status == "approved" %}
                                     <span class="badge bg-success">อนุมัติ</span>
+                                {% elif approval.status == "cancelled" %}
+                                    <span class="badge bg-warning">ยกเลิก</span>
                                 {% else %}
                                     <span class="badge bg-danger">ปฏิเสธ</span>
                                 {% endif %}
