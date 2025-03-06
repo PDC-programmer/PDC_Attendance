@@ -41,9 +41,19 @@
                 <div class="col-md-4 my-4">
                     <label>เลือกกะทำงาน</label>
                     <select id="shift-select" name="shift" class="form-select form-input">
-                        {% for shift in shifts %}
-                        <option value="{{ shift.id }}">{{ shift.name }} น.</option>
-                        {% endfor %}
+                        {% if user.is_authenticated %}
+                            {% for item in user.groups.all %}
+                                {% if item.id == 4 %}
+                                    {% for shift in shifts %}
+                                        <option value="{{ shift.id }}" {% if shift.id == 4 %}selected{% endif %}>{{ shift.name }} น.</option>
+                                    {% endfor %}
+                                {% elif item.id == 1 or item.id == 2 %}
+                                    {% for shift in shifts %}
+                                        <option value="{{ shift.id }}" {% if shift.id == 2 %}selected{% endif %}>{{ shift.name }} น.</option>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
             </div>
