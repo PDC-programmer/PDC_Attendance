@@ -33,6 +33,7 @@ def approve_request(request, approval_id, action):
 def approval_list(request):
     search_query = request.GET.get("search", "").strip()
     approval_type_filter = request.GET.get("approval_type", "")
+    status = request.GET.get("status", "")
 
     approvals = Approval.objects.filter(approve_user=request.user)
 
@@ -48,10 +49,14 @@ def approval_list(request):
     if approval_type_filter:
         approvals = approvals.filter(approval_type=approval_type_filter)
 
+    if status:
+        approvals = approvals.filter(status=status)
+
     return render(request, "approval_app/approval_list.html", {
         "approvals": approvals,
         "search_query": search_query,
         "approval_type_filter": approval_type_filter,
+        "status": status,
     })
 
 
@@ -59,6 +64,7 @@ def approval_list(request):
 def approval_list_request_user(request):
     search_query = request.GET.get("search", "").strip()
     approval_type_filter = request.GET.get("approval_type", "")
+    status = request.GET.get("status", "")
 
     approvals = Approval.objects.filter(request_user=request.user)
 
@@ -74,17 +80,14 @@ def approval_list_request_user(request):
     if approval_type_filter:
         approvals = approvals.filter(approval_type=approval_type_filter)
 
-    # data = []
-    # for approval in approvals:
-    #     if approval.approval_type == "leave":
-    #         # Calculate working hours only
-    #         total_duration = calculate_working_hours(approval.request_user, approval.start_datetime, approval.end_datetime)
-    #         leave_hours = f"{total_duration // 8:.0f} วัน" if total_duration >= 8 else f"{total_duration:.1f} ชม."
+    if status:
+        approvals = approvals.filter(status=status)
 
     return render(request, "approval_app/approval_list_reqeust_user.html", {
         "approvals": approvals,
         "search_query": search_query,
         "approval_type_filter": approval_type_filter,
+        "status": status,
     })
 
 
