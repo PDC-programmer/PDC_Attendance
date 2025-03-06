@@ -48,10 +48,15 @@ def manage_staff(request, staff_id=None):
         brc_id = request.POST.get("brc_id")
         mng_staff_code = request.POST.get("mng_staff_id")  # รับค่าเป็น staff_code
         staff_type = request.POST.get("staff_type")
-        date_of_start = request.POST.get("date_of_start")
         group_id = request.POST.get("group_id")
         brc_chkin_status = request.POST.get("brc_chkin_status")
+
+        # ตรวจสอบและแปลงค่าว่างเป็น None ก่อนบันทึก
+        date_of_start = request.POST.get("date_of_start")
+        date_of_start = date_of_start if date_of_start else None  # ถ้าค่าว่างให้เป็น None
+
         date_of_resign = request.POST.get("date_of_resign")
+        date_of_resign = date_of_resign if date_of_resign else None  # ถ้าค่าว่างให้เป็น None
 
         insert_usr = BsnStaff.objects.filter(django_usr_id=request.user.id).first()
 
@@ -106,7 +111,7 @@ def manage_staff(request, staff_id=None):
                 mng_staff_id=mng_staff_id,
                 staff_type=staff_type,
                 date_of_start=date_of_start,
-                insert_usr_id=insert_usr.staff_id if insert_usr else None,
+                insert_usr_id=62,
                 date_of_insert=datetime.now(),
                 group=group_instance
             )
@@ -118,8 +123,8 @@ def manage_staff(request, staff_id=None):
             sql = """
             INSERT INTO bsn_staff (staff_id, staff_code, staff_pname, staff_fname, staff_lname, staff_fname_en, 
                                    staff_lname_en, staff_department, staff_title, brc_id, mng_staff_id, staff_type,
-                                   date_of_start, insert_usr_id, date_of_insert) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                   date_of_start, date_of_resign, insert_usr_id, date_of_insert) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE 
                 staff_code = VALUES(staff_code),
                 staff_pname = VALUES(staff_pname),
@@ -133,6 +138,7 @@ def manage_staff(request, staff_id=None):
                 mng_staff_id = VALUES(mng_staff_id),
                 staff_type = VALUES(staff_type),
                 date_of_start = VALUES(date_of_start),
+                date_of_resign = VALUES(date_of_resign),
                 update_usr_id = %s,
                 date_of_update = NOW()
             """
@@ -140,8 +146,10 @@ def manage_staff(request, staff_id=None):
                 staff.staff_id, staff_code, staff_pname, staff_fname, staff_lname, staff_fname_en, staff_lname_en,
                 staff_department, staff_title, brc_id,
                 mng_staff_id if mng_staff_id is not None else None,  # ถ้า `None` ให้เก็บ `NULL`
-                staff_type, date_of_start, insert_usr.staff_id if insert_usr else None, datetime.now(),
-                request.user.id  # update user id
+                staff_type, date_of_start if date_of_start else None,  # ถ้า `None` ให้เก็บ `NULL`
+                date_of_resign if date_of_resign else None,  # ✅ รองรับ `date_of_resign`
+                62, datetime.now(),
+                62  # update user id
             ))
             connection.commit()
 

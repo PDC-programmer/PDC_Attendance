@@ -7,6 +7,7 @@ from .models import Approval
 from attendance_app.models import LeaveAttendance, ShiftSchedule
 from django.shortcuts import render
 import json
+from attendance_app.utils import calculate_working_hours  # Import the utility function
 
 
 @login_required(login_url='log-in')
@@ -33,7 +34,7 @@ def approval_list(request):
     search_query = request.GET.get("search", "").strip()
     approval_type_filter = request.GET.get("approval_type", "")
 
-    approvals = Approval.objects.all()
+    approvals = Approval.objects.filter(approve_user=request.user)
 
     if search_query:
         approvals = approvals.filter(
@@ -48,6 +49,39 @@ def approval_list(request):
         approvals = approvals.filter(approval_type=approval_type_filter)
 
     return render(request, "approval_app/approval_list.html", {
+        "approvals": approvals,
+        "search_query": search_query,
+        "approval_type_filter": approval_type_filter,
+    })
+
+
+@login_required(login_url='log-in')
+def approval_list_request_user(request):
+    search_query = request.GET.get("search", "").strip()
+    approval_type_filter = request.GET.get("approval_type", "")
+
+    approvals = Approval.objects.filter(request_user=request.user)
+
+    if search_query:
+        approvals = approvals.filter(
+            request_user__first_name__icontains=search_query
+        ) | approvals.filter(
+            request_user__last_name__icontains=search_query
+        ) | approvals.filter(
+            request_user__username__icontains=search_query
+        )
+
+    if approval_type_filter:
+        approvals = approvals.filter(approval_type=approval_type_filter)
+
+    # data = []
+    # for approval in approvals:
+    #     if approval.approval_type == "leave":
+    #         # Calculate working hours only
+    #         total_duration = calculate_working_hours(approval.request_user, approval.start_datetime, approval.end_datetime)
+    #         leave_hours = f"{total_duration // 8:.0f} วัน" if total_duration >= 8 else f"{total_duration:.1f} ชม."
+
+    return render(request, "approval_app/approval_list_reqeust_user.html", {
         "approvals": approvals,
         "search_query": search_query,
         "approval_type_filter": approval_type_filter,
@@ -74,5 +108,23 @@ def bulk_approve_requests(request):
             updated_count += 1
 
         return JsonResponse({"message": f"{updated_count} คำขอได้รับการอัปเดตแล้ว"}, status=200)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+@login_required(login_url="log-in")
+def bulk_cancel_requests(request):
+    """ API สำหรับยกเลิกคำขอที่เลือก """
+    if request.method == "POST":
+        data = json.loads(request.body)
+        approval_ids = data.get("approval_ids", [])
+
+        approvals = Approval.objects.filter(id__in=approval_ids, request_user=request.user, status="pending")
+        if not approvals.exists():
+            return JsonResponse({"error": "ไม่พบคำขอที่สามารถยกเลิกได้"}, status=400)
+
+        approvals.update(status="cancelled")
+
+        return JsonResponse({"message": f"ยกเลิกคำขอ {len(approvals)} รายการสำเร็จ"}, status=200)
 
     return JsonResponse({"error": "Invalid request"}, status=400)

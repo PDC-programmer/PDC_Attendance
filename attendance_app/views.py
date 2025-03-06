@@ -280,7 +280,7 @@ def leave_request_view_auth(request):
         return JsonResponse({"message": "Leave request submitted and notification sent successfully"}, status=201)
 
     context = {
-        "hours_range": range(9, 19),  # ช่วงชั่วโมงตั้งแต่ 8 ถึง 21
+        "hours_range": range(8, 22),  # ช่วงชั่วโมงตั้งแต่ 8 ถึง 21
     }
 
     return render(request, "attendance/leave_request_auth.html", context)

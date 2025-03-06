@@ -1,17 +1,17 @@
 {% extends "general/base.html" %}
-{% block title %}รายการคำขออนุมัติ{% endblock %}
+{% block title %}รายการคำขอของฉัน{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-center align-items-center my-5">
     <div class="container " style="width: 95%;">
-        <h1 class="text-center">รายการคำขออนุมัติ</h1>
+        <h1 class="text-center">รายการคำขอของฉัน</h1>
 
         <!-- Search & Filter Form -->
         <form method="GET" class="row g-3 mb-3">
             <div class="col-md-4">
                 <label for="search" class="form-label">ค้นหา</label>
                 <input type="text" id="search" name="search" class="form-control"
-                    placeholder="ค้นหาด้วยชื่อผู้ขอ หรือ รหัสพนักงานผู้ขอ" value="{{ search_query }}">
+                    placeholder="ค้นหาด้วยชื่อ หรือ รหัสพนักงาน" value="{{ search_query }}">
             </div>
             <div class="col-md-3">
                 <label for="approval_type" class="form-label">ประเภทคำขอ</label>
@@ -30,8 +30,7 @@
 
         {% if approvals %}
             <div class="text-start mb-2">
-                <button id="approve-selected" class="btn btn-success btn-sm">อนุมัติที่เลือก</button>
-                <button id="reject-selected" class="btn btn-danger btn-sm">ปฏิเสธที่เลือก</button>
+                <button id="cancel-selected" class="btn btn-warning btn-sm">ยกเลิกที่เลือก</button>
             </div>
 
             <div class="table-responsive">
@@ -39,7 +38,6 @@
                     <thead class="table-light">
                         <tr>
                             <th><input type="checkbox" id="select-all"></th>
-                            <th>ผู้ขอ</th>
                             <th>ประเภทคำขอ</th>
                             <th>วันที่</th>
                             <th>สถานะ</th>
@@ -53,7 +51,6 @@
                                        value="{{ approval.id }}"
                                        {% if approval.status != "pending" %}disabled{% endif %}>
                             </td>
-                            <td>{{ approval.request_user.first_name }} {{ approval.request_user.last_name }}</td>
                             <td>
                                 {% if approval.approval_type == "leave" %}
                                     <span class="badge bg-info">ขอลา</span>
@@ -85,6 +82,8 @@
                                     <span class="badge bg-secondary">รออนุมัติ</span>
                                 {% elif approval.status == "approved" %}
                                     <span class="badge bg-success">อนุมัติ</span>
+                                {% elif approval.status == "cancelled" %}
+                                    <span class="badge bg-warning">ยกเลิก</span>
                                 {% else %}
                                     <span class="badge bg-danger">ปฏิเสธ</span>
                                 {% endif %}
@@ -110,18 +109,18 @@ $(document).ready(function () {
         $(".approve-checkbox:not(:disabled)").prop("checked", $(this).prop("checked"));
     });
 
-    function processApprovals(action) {
+    function cancelApprovals() {
         let selected = $(".approve-checkbox:checked").map(function() {
             return $(this).val();
         }).get();
 
         if (selected.length === 0) {
-            Swal.fire("แจ้งเตือน", "กรุณาเลือกคำขอที่ต้องการดำเนินการ", "warning");
+            Swal.fire("แจ้งเตือน", "กรุณาเลือกคำขอที่ต้องการยกเลิก", "warning");
             return;
         }
 
         Swal.fire({
-            title: `คุณแน่ใจหรือไม่ว่าต้องการ ${action === "approved" ? "อนุมัติ" : "ปฏิเสธ"} คำขอที่เลือก?`,
+            title: "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำขอที่เลือก?",
             text: "คุณจะไม่สามารถย้อนกลับได้!",
             icon: "warning",
             showCancelButton: true,
@@ -132,26 +131,25 @@ $(document).ready(function () {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: "/approval/bulk-update/",
+                    url: "{% url 'bulk_cancel_requests' %}",
                     method: "POST",
                     headers: { "X-CSRFToken": "{{ csrf_token }}" },
-                    data: JSON.stringify({ approval_ids: selected, action: action }),
+                    data: JSON.stringify({ approval_ids: selected }),
                     contentType: "application/json",
                     success: function (response) {
-                        Swal.fire("สำเร็จ!", "คำขอได้รับการอัปเดตแล้ว", "success").then(() => {
+                        Swal.fire("สำเร็จ!", "คำขอได้รับการยกเลิกแล้ว", "success").then(() => {
                             location.reload();
                         });
                     },
                     error: function () {
-                        Swal.fire("เกิดข้อผิดพลาด!", "ไม่สามารถดำเนินการได้", "error");
+                        Swal.fire("เกิดข้อผิดพลาด!", "ไม่สามารถยกเลิกคำขอได้", "error");
                     }
                 });
             }
         });
     }
 
-    $("#approve-selected").click(() => processApprovals("approved"));
-    $("#reject-selected").click(() => processApprovals("rejected"));
+    $("#cancel-selected").click(() => cancelApprovals());
 });
 </script>
 {% endblock %}

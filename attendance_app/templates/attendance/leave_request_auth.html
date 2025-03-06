@@ -51,17 +51,36 @@
                 <div class="mb-3 col-md-3">
                     <label for="start-hour" class="form-label">ชั่วโมง</label>
                     <select id="start-hour" name="start_hour" class="form-select form-input" required>
-                        <!-- ชั่วโมงระหว่าง 07-21 -->
-                        {% for hour in hours_range %}
-                        <option value="{{ hour }}">{{ hour }}</option>
-                        {% endfor %}
+                        {% if user.is_authenticated %}
+                            {% for item in user.groups.all %}
+                                {% if item.id == 4 %}
+                                    {% for hour in hours_range %}
+                                        <option value="{{ hour }}" {% if hour == 10 %}selected{% endif %}>{{ hour }}</option>
+                                    {% endfor %}
+                                {% elif item.id == 1 or item.id == 2 %}
+                                    <!-- ชั่วโมงระหว่าง 08-21 -->
+                                    {% for hour in hours_range %}
+                                        <option value="{{ hour }}" {% if hour == 9 %}selected{% endif %}>{{ hour }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
                 <div class="mb-3 col-md-3">
                     <label for="start-minute" class="form-label">นาที</label>
                     <select id="start-minute" name="start_minute" class="form-select form-input" required>
-                        <option value="00">00</option>
-                        <option value="30">30</option>
+                        {% if user.is_authenticated %}
+                            {% for item in user.groups.all %}
+                                {% if item.id == 4 %}
+                                    <option value="30">30</option>
+                                    <option value="00">00</option>
+                                {% elif item.id == 1 or item.id == 2 %}
+                                    <option value="00">00</option>
+                                    <option value="30">30</option>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
             </div>
@@ -73,16 +92,36 @@
                 <div class="mb-3 col-md-3">
                     <label for="end-hour" class="form-label">ชั่วโมง</label>
                     <select id="end-hour" name="end_hour" class="form-select form-input"  required>
-                        {% for hour in hours_range %}
-                        <option value="{{ hour }}" {% if hour == 18 %}selected{% endif %}>{{ hour }}</option>
-                        {% endfor %}
+                        {% if user.is_authenticated %}
+                            {% for item in user.groups.all %}
+                                {% if item.id == 4 %}
+                                    {% for hour in hours_range %}
+                                        <option value="{{ hour }}" {% if hour == 19 %}selected{% endif %}>{{ hour }}</option>
+                                    {% endfor %}
+                                {% elif item.id == 1 or item.id == 2 %}
+                                    <!-- ชั่วโมงระหว่าง 08-21 -->
+                                    {% for hour in hours_range %}
+                                        <option value="{{ hour }}" {% if hour == 18 %}selected{% endif %}>{{ hour }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
                 <div class="mb-3 col-md-3">
                     <label for="end-minute" class="form-label">นาที</label>
                     <select id="end-minute" name="end_minute" class="form-select form-input" required>
-                        <option value="00">00</option>
-                        <option value="30">30</option>
+                        {% if user.is_authenticated %}
+                            {% for item in user.groups.all %}
+                                {% if item.id == 4 %}
+                                    <option value="30">30</option>
+                                    <option value="00">00</option>
+                                {% elif item.id == 1 or item.id == 2 %}
+                                    <option value="00">00</option>
+                                    <option value="30">30</option>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
             </div>
@@ -241,7 +280,7 @@
                     }
                      else {
                         Swal.fire("สำเร็จ", "บันทึกคำขออนุมัติเสร็จสิ้น", "success").then(function() {
-                        window.location.href = "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/attendance/leave-requests-list/?status=pending&leave_type=&start_date=&end_date=";
+                        window.location.href = "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.comapproval/approval-list-request-user/?search=&approval_type=leave";
                         });
                     }
                 })
