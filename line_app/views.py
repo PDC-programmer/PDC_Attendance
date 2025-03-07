@@ -9,6 +9,7 @@ from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveBalanceIni
 from line_app.models import UserProfile
 from user_app.models import User, BsnStaff
 from branch_app.models import BsnBranch
+from approval_app.models import Approval
 from linebot.models import (
     MessageEvent, FollowEvent, PostbackEvent, TextMessage,
     PostbackAction, TemplateSendMessage, ButtonsTemplate, TextSendMessage
@@ -168,7 +169,7 @@ def handle_postback(event):
             return
 
         # Retrieve the LeaveAttendance record
-        approval_record = LeaveAttendance.objects.filter(id=approval_id).first()
+        approval_record = Approval.objects.filter(id=approval_id).first()
         if not approval_record:
             line_bot_api.reply_message(
                 event.reply_token,
