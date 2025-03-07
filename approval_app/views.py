@@ -126,8 +126,11 @@ def bulk_cancel_requests(request):
         if not approvals.exists():
             return JsonResponse({"error": "ไม่พบคำขอที่สามารถยกเลิกได้"}, status=400)
 
-        approvals.update(status="cancelled")
+        # ใช้ save() แทน update()
+        for approval in approvals:
+            approval.status = "cancelled"
+            approval.save()  # ใช้ save() เพื่อเรียก triggers หรือ signals
 
-        return JsonResponse({"message": f"ยกเลิกคำขอ {len(approvals)} รายการสำเร็จ"}, status=200)
+        return JsonResponse({"message": f"ยกเลิกคำขอ {approvals.count()} รายการสำเร็จ"}, status=200)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
