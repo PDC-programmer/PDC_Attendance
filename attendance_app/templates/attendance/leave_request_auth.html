@@ -31,7 +31,7 @@
             </thead>
             <tbody id="leave-balance-table">
 
-                <tr class="clickable-row" data-href="/attendance/leave-requests-list/?leave_type={{ balance.leave_type_id }}">
+                <tr class="clickable-row" data-href="/approval/approval-list-request-user/?approval_type=leave&status=approved">
 
                     <td colspan="4" class="text-center text-muted">ไม่พบข้อมูลสิทธิ์คงเหลือ</td>
                 </tr>
@@ -201,7 +201,7 @@
                     data.forEach(balance => {
                         const row = document.createElement("tr");
                         row.className = "clickable-row";
-                        row.dataset.href = `/attendance/leave-requests-list/?leave_type=${balance.leave_type_id}`;
+                        row.dataset.href = `/approval/approval-list-request-user/?approval_type=leave&status=approved`;
                         row.innerHTML = `
                             <td>${balance.leave_type}</td>
                             <td>${Math.floor(balance.used_hours / 8)} วัน (${balance.used_hours} ชม.)</td>
