@@ -201,7 +201,7 @@ def leave_request_view_auth(request):
             end_datetime=end_datetime,
             reason=reason,
             leave_type=leave_type,
-            image=image,
+            image=leave_record.image,
             approval_type="leave",
             status="pending",
             created_at=now()
