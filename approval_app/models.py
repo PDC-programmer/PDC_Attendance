@@ -6,7 +6,7 @@ from datetime import datetime, time
 
 
 def leave_request_image_path(instance, filename):
-    return os.path.join(f"leave_request_images/{instance.user.username}/{datetime.date(instance.start_datetime)}",
+    return os.path.join(f"leave_request_images/{instance.request_user.username}/{datetime.date(instance.start_datetime)}",
                         filename)
 
 
