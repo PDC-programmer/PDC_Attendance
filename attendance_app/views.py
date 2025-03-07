@@ -108,9 +108,12 @@ def get_leave_attendances(request):
         else:
             approver_name = leave.approve_user.username if leave.approve_user else "N/A"
 
+        approval = Approval.objects.filter(leave_attendance=leave).first()
+
         # Add leave details to the response data
         data.append({
             "id": leave.id,
+            "approval_id": approval.id,
             "approve_user": approver_name,
             "start_datetime": leave.start_datetime,
             "end_datetime": leave.end_datetime,
@@ -171,7 +174,7 @@ def leave_request_view_auth(request):
         if not approver_user:
             return JsonResponse({"error": "ไม่พบผู้อนุมัติ !"}, status=404)
 
-        created_leave_attendance = LeaveAttendance.objects.filter(user=user)
+        created_leave_attendance = LeaveAttendance.objects.filter(user=user, status__in=["pending", "approved"])
 
         is_already_created = created_leave_attendance.filter(start_datetime__date=start_datetime.date()).exists()
 
@@ -344,7 +347,7 @@ def leave_request_detail(request, leave_id):
         return HttpResponseForbidden("คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ !")
 
     return render(request, "attendance/leave_request_detail.html",
-                  {"leave_request": leave_request, "staff": staff, "approver": approver, "leave_hours": leave_hours})
+                  {"leave_request": leave_request, "staff": staff, "approver": approver, "leave_hours": leave_hours, "approval": approval})
 
 
 from django.utils.dateparse import parse_date
