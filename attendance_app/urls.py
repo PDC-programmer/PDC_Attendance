@@ -28,4 +28,6 @@ urlpatterns = [
     path("leave-balance/edit/<int:leave_balance_id>/", views.edit_leave_balance, name="edit_leave_balance"),
     path("leave-balance/import/", views.import_leave_balance, name="import_leave_balance"),
 
+    path("search-attendance/", views.search_attendance, name="search_attendance"),
+
 ]

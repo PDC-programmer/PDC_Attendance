@@ -6,14 +6,16 @@ from datetime import datetime, time
 
 
 def leave_request_image_path(instance, filename):
-    return os.path.join(f"leave_request_images/{instance.request_user.username}/{datetime.date(instance.start_datetime)}",
-                        filename)
+    return os.path.join(
+        f"leave_request_images/{instance.request_user.username}/{datetime.date(instance.start_datetime)}",
+        filename)
 
 
 class Approval(models.Model):
     APPROVAL_TYPES = [
         ("leave", "ขอลา"),
         ("shift", "เปลี่ยนกะทำงาน"),
+        ("edit_time", "แก้ไขเวลางาน"),
     ]
 
     STATUS_CHOICES = [
@@ -32,6 +34,9 @@ class Approval(models.Model):
                                          related_name="leave_attendance_id", null=True, blank=True)
     shift_schedule = models.ForeignKey(ShiftSchedule, on_delete=models.DO_NOTHING, related_name="shift_schedule_id",
                                        null=True, blank=True)
+    edit_time_attendance = models.ForeignKey(EditTimeAttendance, on_delete=models.DO_NOTHING,
+                                             related_name="edit_time_attendance_id",
+                                             null=True, blank=True)
     request_user = models.ForeignKey(User, on_delete=models.DO_NOTHING, related_name="approval_requests")
     approve_user = models.ForeignKey(User, on_delete=models.DO_NOTHING, related_name="approval_approver", null=True,
                                      blank=True)
@@ -46,6 +51,8 @@ class Approval(models.Model):
     reason = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
     image = models.ImageField(upload_to=leave_request_image_path, null=True, blank=True)
+    branch = models.ForeignKey(BsnBranch, on_delete=models.DO_NOTHING, null=True, blank=True)
+    timestamp = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(null=True, blank=True)
 

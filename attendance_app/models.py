@@ -1,5 +1,6 @@
 from django.db import models
 from user_app.models import User
+from branch_app.models import BsnBranch
 import os
 from datetime import datetime, time
 
@@ -101,3 +102,52 @@ class PublicHoliday(models.Model):
                                                      ('OP', 'สาขา')
                                                      ],
                              blank=True, null=True)
+
+
+class EditTimeAttendance(models.Model):
+    approve_user = models.ForeignKey(User, on_delete=models.DO_NOTHING,
+                                     related_name="edit_time_attendance_approve_user", null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, related_name="edit_time_attendance")
+    date = models.DateField(null=True, blank=True)
+    branch = models.ForeignKey(BsnBranch, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="edit_time_attendance")
+    timestamp = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=50, choices=[('approved', 'อนุมัติ'),
+                                                      ('pending', 'รออนุมัติ'),
+                                                      ('rejected', 'ปฏิเสธ'),
+                                                      ('cancelled', 'ยกเลิก')],
+                              default='pending')
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # auto add created date time
+    updated_at = models.DateTimeField(null=True, blank=True)  # Change to DateTimeField for precise times
+
+    def __str__(self):
+        return f"{self.user.username} - {self.date} at ({self.branch}) {self.time}"
+
+
+class TaLog(models.Model):
+    ta_id = models.BigIntegerField(primary_key=True, blank=False, null=False)
+    staff_id = models.BigIntegerField(blank=True, null=True)
+    do_staff_id = models.IntegerField(blank=True, null=True)
+    qr_code = models.CharField(max_length=254, blank=True, null=True)
+    rec_key = models.CharField(max_length=254, blank=True, null=True)
+    brc_id = models.BigIntegerField(blank=True, null=True)
+    gps_lat = models.CharField(max_length=254, blank=True, null=True)
+    gps_lng = models.CharField(max_length=254, blank=True, null=True)
+    staff_photo = models.CharField(max_length=254, blank=True, null=True)
+    log_timestamp = models.DateTimeField(blank=True, null=True)
+    device_no = models.CharField(max_length=254, blank=True, null=True)
+    http_user_agent = models.CharField(max_length=254, blank=True, null=True)
+    remote_addr = models.CharField(max_length=254, blank=True, null=True)
+    log_status = models.CharField(max_length=254, blank=True, null=True)
+    approve_staff_id = models.BigIntegerField(blank=True, null=True)
+    date_of_approve = models.DateTimeField(blank=True, null=True)
+    insert_usr_id = models.BigIntegerField(blank=True, null=True)
+    date_of_insert = models.DateTimeField(blank=True, null=True)
+    update_usr_id = models.BigIntegerField(blank=True, null=True)
+    date_of_update = models.DateTimeField(blank=True, null=True)
+    delete_usr_id = models.BigIntegerField(blank=True, null=True)
+    date_of_delete = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'ta_log'
+

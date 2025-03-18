@@ -92,6 +92,7 @@ def manage_staff(request, staff_id=None):
             staff.date_of_update = datetime.now()
             staff.brc_chkin_status = brc_chkin_status
             staff.date_of_resign = date_of_resign
+            staff.update_usr_id = 62
             staff.save()
             message = "อัปเดตข้อมูลพนักงานสำเร็จ!"
 
