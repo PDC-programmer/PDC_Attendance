@@ -8,6 +8,7 @@ from attendance_app.models import LeaveAttendance, ShiftSchedule
 from django.shortcuts import render
 import json
 from attendance_app.utils import calculate_working_hours  # Import the utility function
+from django.core.paginator import Paginator
 
 
 @login_required(login_url='log-in')
@@ -52,8 +53,15 @@ def approval_list(request):
     if status:
         approvals = approvals.filter(status=status)
 
+    approvals = approvals.order_by("-created_at")  # เรียงจากใหม่ไปเก่า
+
+    # ✅ Pagination
+    paginator = Paginator(approvals, 20)  # แสดง 20 รายการต่อหน้า
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
     return render(request, "approval_app/approval_list.html", {
-        "approvals": approvals,
+        "approvals": page_obj,
         "search_query": search_query,
         "approval_type_filter": approval_type_filter,
         "status": status,
@@ -83,8 +91,15 @@ def approval_list_request_user(request):
     if status:
         approvals = approvals.filter(status=status)
 
+    approvals = approvals.order_by("-created_at")  # เรียงจากใหม่ไปเก่า
+
+    # ✅ Pagination
+    paginator = Paginator(approvals, 20)  # แสดง 20 รายการต่อหน้า
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
     return render(request, "approval_app/approval_list_reqeust_user.html", {
-        "approvals": approvals,
+        "approvals": page_obj,
         "search_query": search_query,
         "approval_type_filter": approval_type_filter,
         "status": status,

@@ -24,6 +24,7 @@ from django.db import transaction
 from django.contrib import messages
 import pandas as pd
 from django.core.files.storage import default_storage
+from django.core.paginator import Paginator
 
 
 # Initialize LineBotApi
@@ -696,6 +697,8 @@ def shift_schedule_update(request):
         staff = BsnStaff.objects.filter(django_usr_id=user).first()
         approver_person = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
         approver_user = User.objects.filter(id=approver_person.django_usr_id.id).first()
+        if not approver_user:
+            return JsonResponse({"error": "ไม่พบข้อมูลผู้อนุมัติของคุณ !"}, status=400)
 
         selected_shift = Shift.objects.get(id=selected_shift_id)
 
@@ -713,12 +716,12 @@ def shift_schedule_update(request):
         public_holiday_cn = set(PublicHoliday.objects.filter(group="CN").values_list("date", flat=True))
         public_holiday_op = set(PublicHoliday.objects.filter(group="OP").values_list("date", flat=True))
 
-        existing_schedules = {
-            (s.date, s.shift_day): s for s in ShiftSchedule.objects.filter(user=user, date__range=[start_date, end_date])
-        }
+        # existing_schedules = {
+        #     (s.date, s.shift_day): s for s in ShiftSchedule.objects.filter(user=user, date__range=[start_date, end_date])
+        # }
 
         shift_schedules_to_create = []
-        shift_schedules_to_update = []
+        # shift_schedules_to_update = []
 
         current_date = start_date
         while current_date <= end_date:
@@ -733,28 +736,28 @@ def shift_schedule_update(request):
                 if current_date in public_holiday_op:
                     shift_day = "public_holiday"
 
-            if (current_date, shift_day) in existing_schedules:
-                schedule = existing_schedules[(current_date, shift_day)]
-                schedule.shift = selected_shift
-                schedule.status = "approved"
-                schedule.approve_user = approver_user
-                shift_schedules_to_update.append(schedule)
-            else:
-                shift_schedules_to_create.append(ShiftSchedule(
-                    user=user,
-                    date=current_date,
-                    shift_day=shift_day,
-                    shift=selected_shift,
-                    status="approved"
-                ))
+            # if (current_date, shift_day) in existing_schedules:
+            #     schedule = existing_schedules[(current_date, shift_day)]
+            #     schedule.shift = selected_shift
+            #     schedule.status = "approved"
+            #     schedule.approve_user = approver_user
+            #     shift_schedules_to_update.append(schedule)
+            # else:
+            shift_schedules_to_create.append(ShiftSchedule(
+                user=user,
+                date=current_date,
+                shift_day=shift_day,
+                shift=selected_shift,
+                status="approved"
+            ))
 
             current_date += timedelta(days=1)
 
         with transaction.atomic():
             if shift_schedules_to_create:
                 ShiftSchedule.objects.bulk_create(shift_schedules_to_create, ignore_conflicts=True)
-            if shift_schedules_to_update:
-                ShiftSchedule.objects.bulk_update(shift_schedules_to_update, ['shift', 'status', 'approve_user'])
+            # if shift_schedules_to_update:
+            #     ShiftSchedule.objects.bulk_update(shift_schedules_to_update, ['shift', 'status', 'approve_user'])
 
         return JsonResponse({"message": "อัปเดตตารางกะสำเร็จแล้ว"}, status=200)
 
@@ -1060,4 +1063,69 @@ def import_leave_balance(request):
         return redirect("leave_balance_list")
 
     return redirect("leave_balance_list")
+
+
+@login_required(login_url="log-in")
+def search_attendance(request):
+    """ พนักงานสามารถค้นหาประวัติการเข้าออกงานของตนเองได้ """
+    search_date = request.GET.get("date", "")
+
+    # ดึงข้อมูลจาก TaLog ที่เกี่ยวข้องกับ user ปัจจุบัน
+    attendance_logs = TaLog.objects.filter(staff_id=request.user.id).order_by("-log_timestamp")
+
+    # ถ้ากรอกวันที่ ให้กรองเฉพาะวันนั้น
+    if search_date:
+        attendance_logs = attendance_logs.filter(log_timestamp__date=search_date)
+
+    # ✅ Pagination
+    paginator = Paginator(attendance_logs, 10)  # แสดง 10 รายการต่อหน้า
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "attendance/search_attendance.html", {
+        "attendance_logs": page_obj,
+        "search_date": search_date
+    })
+
+
+@login_required(login_url="log-in")
+def search_attendance(request):
+    user = request.user
+    staff = BsnStaff.objects.filter(django_usr_id=user).first()
+
+    if not staff:
+        return render(request, "attendance/search_attendance.html", {
+            "error": "ไม่พบข้อมูลพนักงานของคุณ"
+        })
+
+    start_date = request.GET.get("start_date", "")
+    end_date = request.GET.get("end_date", "")
+
+    attendance_logs = TaLog.objects.filter(staff_id=staff.staff_id)
+
+    if start_date and end_date:
+        try:
+            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+            end_date = datetime.strptime(end_date, "%Y-%m-%d")
+            attendance_logs = attendance_logs.filter(
+                log_timestamp__date__range=[start_date, end_date]
+            )
+        except ValueError:
+            return render(request, "attendance/search_attendance.html", {
+                "error": "รูปแบบวันที่ไม่ถูกต้อง กรุณาเลือกใหม่"
+            })
+
+    attendance_logs = attendance_logs.order_by("-log_timestamp")
+
+    # ✅ Pagination
+    paginator = Paginator(attendance_logs, 30)  # แสดง 30 รายการต่อหน้า
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "attendance/search_attendance.html", {
+        "attendance_logs": page_obj,
+        "start_date": start_date.strftime("%Y-%m-%d") if start_date else "",
+        "end_date": end_date.strftime("%Y-%m-%d") if end_date else "",
+    })
+
 

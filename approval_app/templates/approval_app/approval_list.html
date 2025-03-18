@@ -37,7 +37,6 @@
         </form>
 
         <hr>
-
         {% if approvals %}
             <div class="text-start mb-2">
                 <button id="approve-selected" class="btn btn-success btn-sm">อนุมัติที่เลือก</button>
@@ -52,6 +51,7 @@
                             <th>ผู้ขอ</th>
                             <th>ประเภทคำขอ</th>
                             <th>วันที่</th>
+                            <th>รายละเอียด</th>
                             <th>สถานะ</th>
                         </tr>
                     </thead>
@@ -74,20 +74,15 @@
                             <td>
                                 {% if approval.approval_type == "leave" %}
                                     {{ approval.start_datetime|date:"d/m/Y H:i" }} - {{ approval.end_datetime|date:"d/m/Y H:i" }}
-                                    <br>
-<!--                                    <small class="text-muted">-->
-<!--                                        ({{ approval.start_datetime|time:"H:i" }} - {{ approval.end_datetime|time:"H:i" }}-->
-<!--                                        {% if approval.start_datetime.date == approval.end_datetime.date %}-->
-<!--                                            - {{ approval.end_datetime|date:"H:i" }}-->
-<!--                                            | {{ approval.end_datetime|time:"H:i"|add:"-approval.start_datetime.time" }} ชั่วโมง-->
-<!--                                        {% else %}-->
-<!--                                            | {{ approval.end_datetime|date:"d/m/Y" }}-->
-<!--                                            | {{ approval.end_datetime|date:"d" |add:"-approval.start_datetime.date" }} วัน-->
-<!--                                        {% endif %}-->
-<!--                                        )-->
-<!--                                    </small>-->
-                                {% else %}
+                                {% elif approval.approval_type == "shift" %}
                                     {{ approval.date|date:"d/m/Y" }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if approval.approval_type == "leave" %}
+                                    {{ approval.leave_type.th_name }}
+                                {% elif approval.approval_type == "shift" %}
+                                    {{ approval.get_shift_day_display }} ({{ approval.shift.name }} น.)
                                 {% endif %}
                             </td>
                             <td>
@@ -106,6 +101,27 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- ✅ Pagination -->
+            <nav aria-label="Pagination">
+                <ul class="pagination justify-content-center mt-3">
+                    {% if approvals.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ approvals.previous_page_number }}">&laquo;</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">{{ approvals.number }} / {{ approvals.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if approvals.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ approvals.next_page_number }}">&raquo;</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
         {% else %}
             <p class="text-center text-muted mt-4">ไม่พบคำขอที่ตรงกับเงื่อนไข</p>
         {% endif %}

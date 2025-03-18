@@ -175,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("เกิดข้อผิดพลาด: " + data.error);
             } else {
                 alert("อัปเดตกะทั้งหมดสำเร็จแล้ว!");
-                location.reload(); // Reload page after update
+                window.location.href = "/approval/approval-list-request-user/?approval_type=shift&status=pending";
             }
         })
         .catch(err => console.error("Error updating shifts:", err));

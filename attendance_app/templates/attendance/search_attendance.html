@@ -1,0 +1,79 @@
+{% extends "general/base.html" %}
+{% block title %}ค้นหาข้อมูลเวลาเข้าออกงาน{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+    <div class="container " style="width: 95%;">
+        <h1 class="text-center">ค้นหาข้อมูลเวลาเข้าออกงาน</h1>
+
+        <!-- Search Form -->
+        <form method="GET" class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label">วันที่เริ่มต้น</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">วันที่สิ้นสุด</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 align-self-end">
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
+            </div>
+        </form>
+
+        <hr>
+
+        {% if error %}
+            <p class="text-danger text-center">{{ error }}</p>
+        {% elif attendance_logs %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mt-4">
+                    <thead class="table-light">
+                        <tr>
+                            <th>วันที่</th>
+                            <th>เวลาเข้าออก</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in attendance_logs %}
+                        <tr>
+                            <td>{{ log.log_timestamp|date:"d/m/Y" }}</td>
+                            <td>{{ log.log_timestamp|time:"H:i:s" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ✅ Pagination -->
+            <nav aria-label="Pagination">
+                <ul class="pagination justify-content-center mt-3">
+                    {% if attendance_logs.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?start_date={{ start_date }}&end_date={{ end_date }}&page=1">« หน้าแรก</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ attendance_logs.previous_page_number }}">‹ ก่อนหน้า</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">หน้า {{ attendance_logs.number }} จาก {{ attendance_logs.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if attendance_logs.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ attendance_logs.next_page_number }}">ถัดไป ›</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ attendance_logs.paginator.num_pages }}">หน้าสุดท้าย »</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% else %}
+            <p class="text-center text-muted mt-4">ไม่พบข้อมูลเวลาเข้าออกงาน</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
