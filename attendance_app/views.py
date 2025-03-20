@@ -153,7 +153,8 @@ def leave_request_view_auth(request):
         # Calculate working hours based on shifts
         working_hours = calculate_working_hours(user, start_datetime, end_datetime)
         if working_hours <= 0:
-            return JsonResponse({"error": "ช่วงเวลาที่เลือกไม่ได้อยู่ในเวลาทำงาน กรุณาเลือกเวลาทำงานของคุณก่อนทำการลา !"}, status=400)
+            return JsonResponse(
+                {"error": "ช่วงเวลาที่เลือกไม่ได้อยู่ในเวลาทำงาน กรุณาเลือกเวลาทำงานของคุณก่อนทำการลา !"}, status=400)
 
         # ตรวจสอบว่าประเภทการลามีอยู่ในระบบ
         leave_type = LeaveType.objects.filter(id=leave_type_id).first()
@@ -351,7 +352,8 @@ def leave_request_detail(request, leave_id):
         return HttpResponseForbidden("คุณไม่มีสิทธิ์เข้าถึงการดำเนินการนี้ !")
 
     return render(request, "attendance/leave_request_detail.html",
-                  {"leave_request": leave_request, "staff": staff, "approver": approver, "leave_hours": leave_hours, "approval": approval})
+                  {"leave_request": leave_request, "staff": staff, "approver": approver, "leave_hours": leave_hours,
+                   "approval": approval})
 
 
 from django.utils.dateparse import parse_date
@@ -407,7 +409,8 @@ def leave_requests_approval(request):
 
     # เพิ่มข้อมูลที่คำนวณได้สำหรับการแสดงผล
     for leave_request in leave_requests:
-        leave_hours = calculate_working_hours(leave_request.user, leave_request.start_datetime, leave_request.end_datetime)
+        leave_hours = calculate_working_hours(leave_request.user, leave_request.start_datetime,
+                                              leave_request.end_datetime)
         leave_request.total_duration = (
             f"{leave_hours // 8:.0f} วัน" if leave_hours >= 8 else f"{leave_hours:.1f} ชม."
         )
@@ -464,7 +467,8 @@ def leave_requests_list(request):
 
     # เพิ่มข้อมูลที่คำนวณได้สำหรับการแสดงผล
     for leave_request in leave_requests:
-        leave_hours = calculate_working_hours(leave_request.user, leave_request.start_datetime, leave_request.end_datetime)
+        leave_hours = calculate_working_hours(leave_request.user, leave_request.start_datetime,
+                                              leave_request.end_datetime)
         leave_request.total_duration = (
             f"{leave_hours // 8:.0f} วัน" if leave_hours >= 8 else f"{leave_hours:.1f} ชม."
         )
@@ -1017,7 +1021,8 @@ def import_leave_balance(request):
 
             required_columns = {"username", "leave_type", "total_hours", "remaining_hours"}
             if not required_columns.issubset(df.columns):
-                messages.error(request, "❌ ไฟล์ Excel ต้องมีคอลัมน์: username, leave_type, total_hours, remaining_hours")
+                messages.error(request,
+                               "❌ ไฟล์ Excel ต้องมีคอลัมน์: username, leave_type, total_hours, remaining_hours")
                 print("❌ Missing required columns!")
                 return redirect("leave_balance_list")
 
@@ -1187,12 +1192,38 @@ def employee_attendance_history(request):
                 end_datetime__date__gte=start_date
             ).select_related("leave_type")
 
+            # ✅ โหลดข้อมูลแก้ไขเวลา (EditTimeAttendance)
+            edit_logs = EditTimeAttendance.objects.filter(
+                user=user, date__range=[start_date, end_date], status__in=["pending", "approved"]
+            ).values("date", "timestamp", "branch_id")
+
             # ✅ โหลดข้อมูลบันทึกเวลาเข้าออก (TaLog)
             ta_logs = TaLog.objects.filter(
                 staff_id=staff.staff_id, log_timestamp__date__range=[start_date, end_date]
             ).values("log_timestamp", "staff_id", "gps_lat", "gps_lng", "log_timestamp__date")
 
-            # ✅ แมป Check-in / Check-out ตามวันที่
+            # ✅ แมป EditTimeAttendance
+            edit_time_map = {}
+            for log in edit_logs:
+                date_str = log["date"].strftime("%Y-%m-%d")
+
+                if date_str not in edit_time_map:
+                    edit_time_map[date_str] = {
+                        "check_in": None,
+                        "check_out": None,
+                        "branch_in": None,
+                        "branch_out": None,
+                    }
+
+                if not edit_time_map[date_str]["check_in"] or log["timestamp"] < edit_time_map[date_str]["check_in"]:
+                    edit_time_map[date_str]["check_in"] = log["timestamp"]
+                    edit_time_map[date_str]["branch_in"] = log["branch_id"]
+
+                if not edit_time_map[date_str]["check_out"] or log["timestamp"] > edit_time_map[date_str]["check_out"]:
+                    edit_time_map[date_str]["check_out"] = log["timestamp"]
+                    edit_time_map[date_str]["branch_out"] = log["branch_id"]
+
+            # ✅ แมป TaLog
             ta_log_map = {}
             for log in ta_logs:
                 date_str = log["log_timestamp__date"].strftime("%Y-%m-%d")
@@ -1214,7 +1245,8 @@ def employee_attendance_history(request):
             # ✅ แมปวันลาไปยัง records
             leave_map = {}
             for leave in leave_records:
-                leave_dates = [leave.start_datetime.date() + timedelta(days=i) for i in range((leave.end_datetime.date() - leave.start_datetime.date()).days + 1)]
+                leave_dates = [leave.start_datetime.date() + timedelta(days=i) for i in
+                               range((leave.end_datetime.date() - leave.start_datetime.date()).days + 1)]
                 for leave_date in leave_dates:
                     leave_map[leave_date.strftime("%Y-%m-%d")] = {
                         "leave_type": leave.leave_type.th_name,
@@ -1224,40 +1256,61 @@ def employee_attendance_history(request):
             # ✅ ตรวจสอบข้อมูลเข้า-ออก และเพิ่มวันลา
             for record in attendance_records:
                 date_str = record.date.strftime("%Y-%m-%d")
-                log_data = ta_log_map.get(date_str, {})
-                timestamps = sorted(log_data.get("timestamps", []))
-                shift = record.shift
-
                 leave_info = leave_map.get(date_str, None)  # เช็คว่ามีการลาหรือไม่
 
-                if len(timestamps) == 1:
-                    single_log = timestamps[0]
-                    shift_midpoint = datetime.combine(record.date, shift.morning_end)
+                if date_str in edit_time_map:  # ✅ ใช้ EditTimeAttendance ถ้ามี
+                    log_data = edit_time_map[date_str]
+                    branch_in = BsnBranch.objects.filter(id=log_data["branch_in"]).first()
+                    branch_out = BsnBranch.objects.filter(id=log_data["branch_out"]).first()
 
-                    if single_log < shift_midpoint:
-                        log_data["check_in"] = single_log
-                        log_data["branch_in"] = find_nearest_branch(float(lat), float(lng)) if lat and lng else "ไม่พบสาขา"
-                    else:
-                        log_data["check_out"] = single_log
-                        log_data["branch_out"] = find_nearest_branch(float(lat), float(lng)) if lat and lng else "ไม่พบสาขา"
+                    records.append({
+                        "date": record.date,
+                        "shift_day": record.get_shift_day_display(),
+                        "shift_name": record.shift.name,
+                        "check_in": log_data["check_in"],
+                        "check_out": log_data["check_out"],
+                        "branch_in": branch_in.brc_sname if branch_in else "ไม่พบสาขา",
+                        "branch_out": branch_out.brc_sname if branch_out else "ไม่พบสาขา",
+                        "leave_type": leave_info["leave_type"] if leave_info else None,
+                        "leave_reason": leave_info["reason"] if leave_info else None,
+                    })
+                else:  # ✅ ใช้ TaLog ถ้าไม่มี EditTimeAttendance
+                    log_data = ta_log_map.get(date_str, {})
+                    timestamps = sorted(log_data.get("timestamps", []))
+                    shift = record.shift
 
-                elif len(timestamps) > 1:
-                    log_data["check_in"] = timestamps[0]
-                    log_data["check_out"] = timestamps[-1]
-                    log_data["branch_in"] = find_nearest_branch(float(lat), float(lng)) if lat and lng else "ไม่พบสาขา"
-                    log_data["branch_out"] = find_nearest_branch(float(lat), float(lng)) if lat and lng else "ไม่พบสาขา"
+                    if len(timestamps) == 1:
+                        single_log = timestamps[0]
+                        shift_midpoint = datetime.combine(record.date, shift.morning_end)
 
-                records.append({
-                    "date": record.date,
-                    "shift_day": record.get_shift_day_display(),
-                    "shift_name": record.shift.name,
-                    "check_in": log_data.get("check_in"),
-                    "check_out": log_data.get("check_out"),
-                    "branch_in": log_data.get("branch_in"),
-                    "branch_out": log_data.get("branch_out"),
-                    "leave_type": leave_info["leave_type"] if leave_info else None,
-                    "leave_reason": leave_info["reason"] if leave_info else None,
-                })
+                        if single_log < shift_midpoint:
+                            log_data["check_in"] = single_log
+                            log_data["branch_in"] = find_nearest_branch(float(lat),
+                                                                        float(lng)) if lat and lng else "ไม่พบสาขา"
+                        else:
+                            log_data["check_out"] = single_log
+                            log_data["branch_out"] = find_nearest_branch(float(lat),
+                                                                         float(lng)) if lat and lng else "ไม่พบสาขา"
+
+                    elif len(timestamps) > 1:
+                        log_data["check_in"] = timestamps[0]
+                        log_data["check_out"] = timestamps[-1]
+                        log_data["branch_in"] = find_nearest_branch(float(lat),
+                                                                    float(lng)) if lat and lng else "ไม่พบสาขา"
+                        log_data["branch_out"] = find_nearest_branch(float(lat),
+                                                                     float(lng)) if lat and lng else "ไม่พบสาขา"
+
+                    records.append({
+                        "date": record.date,
+                        "shift_day": record.get_shift_day_display(),
+                        "shift_name": record.shift.name,
+                        "check_in": log_data.get("check_in"),
+                        "check_out": log_data.get("check_out"),
+                        "branch_in": log_data.get("branch_in"),
+                        "branch_out": log_data.get("branch_out"),
+                        "leave_type": leave_info["leave_type"] if leave_info else None,
+                        "leave_reason": leave_info["reason"] if leave_info else None,
+                    })
 
             # ✅ Pagination (30 รายการต่อหน้า)
             paginator = Paginator(records, 30)
@@ -1274,6 +1327,8 @@ def employee_attendance_history(request):
         "start_date": start_date.strftime("%Y-%m-%d") if start_date else "",
         "end_date": end_date.strftime("%Y-%m-%d") if end_date else "",
         "branches": branches,
+        "hours": range(0, 24),
+        "minutes": range(0, 60),
     })
 
 
@@ -1312,11 +1367,11 @@ def request_edit_time(request):
 
                 # ✅ ตรวจสอบว่าข้อมูลเปลี่ยนแปลงหรือไม่
                 existing_in = EditTimeAttendance.objects.filter(
-                    user=user, date=date, branch_id=branch_in, timestamp=check_in
+                    user=user, date=date, branch_id=branch_in, timestamp=check_in, status__in=["pending", "approved"]
                 ).exists()
 
                 existing_out = EditTimeAttendance.objects.filter(
-                    user=user, date=date, branch_id=branch_out, timestamp=check_out
+                    user=user, date=date, branch_id=branch_out, timestamp=check_out, status__in=["pending", "approved"]
                 ).exists()
 
                 if not existing_in:
