@@ -25,7 +25,10 @@ from django.contrib import messages
 import pandas as pd
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
-
+from django.utils.timezone import make_aware
+from django.db.models import Min, Max
+from geopy.distance import geodesic  # ใช้สำหรับคำนวณระยะทาง
+from branch_app.models import BsnBranch
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -1129,3 +1132,252 @@ def search_attendance(request):
     })
 
 
+def find_nearest_branch(lat, lng):
+    """ ค้นหาสาขาที่ใกล้ที่สุดจาก GPS """
+    try:
+        branches = BsnBranch.objects.all().values("id", "brc_sname", "gps_lat", "gps_lng")
+        min_distance = float("inf")
+        nearest_branch = None
+
+        for branch in branches:
+            branch_lat = float(branch["gps_lat"])
+            branch_lng = float(branch["gps_lng"])
+            distance = geodesic((lat, lng), (branch_lat, branch_lng)).meters  # คำนวณระยะทางเป็นเมตร
+
+            if distance < min_distance:
+                min_distance = distance
+                nearest_branch = branch["brc_sname"]  # ใช้ชื่อสาขาแทน
+
+        return nearest_branch if nearest_branch else "ไม่พบสาขา"
+
+    except Exception as e:
+        print(f"❌ Error finding nearest branch: {e}")
+        return "ไม่พบสาขา"
+
+
+@login_required(login_url="log-in")
+def employee_attendance_history(request):
+    user = request.user
+    staff = BsnStaff.objects.filter(django_usr_id=user).first()
+    branches = BsnBranch.objects.all()
+
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    records = []
+    page_obj = None
+
+    if start_date and end_date:
+        try:
+            start_date = parse_date(start_date)
+            end_date = parse_date(end_date)
+
+            if not (start_date and end_date):
+                raise ValueError("Invalid date format")
+
+            # ✅ โหลดข้อมูลกะทำงานของพนักงาน
+            attendance_records = ShiftSchedule.objects.filter(
+                user=user, status="approved", date__range=[start_date, end_date]
+            ).select_related("shift").order_by("-date")
+
+            # ✅ โหลดข้อมูลการลาที่ได้รับอนุมัติของพนักงาน
+            leave_records = LeaveAttendance.objects.filter(
+                user=user, status="approved",
+                start_datetime__date__lte=end_date,
+                end_datetime__date__gte=start_date
+            ).select_related("leave_type")
+
+            # ✅ โหลดข้อมูลบันทึกเวลาเข้าออก (TaLog)
+            ta_logs = TaLog.objects.filter(
+                staff_id=staff.staff_id, log_timestamp__date__range=[start_date, end_date]
+            ).values("log_timestamp", "staff_id", "gps_lat", "gps_lng", "log_timestamp__date")
+
+            # ✅ แมป Check-in / Check-out ตามวันที่
+            ta_log_map = {}
+            for log in ta_logs:
+                date_str = log["log_timestamp__date"].strftime("%Y-%m-%d")
+                timestamp = log["log_timestamp"]
+                lat = log["gps_lat"]
+                lng = log["gps_lng"]
+
+                if date_str not in ta_log_map:
+                    ta_log_map[date_str] = {
+                        "timestamps": [],
+                        "check_in": None,
+                        "check_out": None,
+                        "branch_in": "ไม่พบสาขา",
+                        "branch_out": "ไม่พบสาขา",
+                    }
+
+                ta_log_map[date_str]["timestamps"].append(timestamp)
+
+            # ✅ แมปวันลาไปยัง records
+            leave_map = {}
+            for leave in leave_records:
+                leave_dates = [leave.start_datetime.date() + timedelta(days=i) for i in range((leave.end_datetime.date() - leave.start_datetime.date()).days + 1)]
+                for leave_date in leave_dates:
+                    leave_map[leave_date.strftime("%Y-%m-%d")] = {
+                        "leave_type": leave.leave_type.th_name,
+                        "reason": leave.reason,
+                    }
+
+            # ✅ ตรวจสอบข้อมูลเข้า-ออก และเพิ่มวันลา
+            for record in attendance_records:
+                date_str = record.date.strftime("%Y-%m-%d")
+                log_data = ta_log_map.get(date_str, {})
+                timestamps = sorted(log_data.get("timestamps", []))
+                shift = record.shift
+
+                leave_info = leave_map.get(date_str, None)  # เช็คว่ามีการลาหรือไม่
+
+                if len(timestamps) == 1:
+                    single_log = timestamps[0]
+                    shift_midpoint = datetime.combine(record.date, shift.morning_end)
+
+                    if single_log < shift_midpoint:
+                        log_data["check_in"] = single_log
+                        log_data["branch_in"] = find_nearest_branch(float(lat), float(lng)) if lat and lng else "ไม่พบสาขา"
+                    else:
+                        log_data["check_out"] = single_log
+                        log_data["branch_out"] = find_nearest_branch(float(lat), float(lng)) if lat and lng else "ไม่พบสาขา"
+
+                elif len(timestamps) > 1:
+                    log_data["check_in"] = timestamps[0]
+                    log_data["check_out"] = timestamps[-1]
+                    log_data["branch_in"] = find_nearest_branch(float(lat), float(lng)) if lat and lng else "ไม่พบสาขา"
+                    log_data["branch_out"] = find_nearest_branch(float(lat), float(lng)) if lat and lng else "ไม่พบสาขา"
+
+                records.append({
+                    "date": record.date,
+                    "shift_day": record.get_shift_day_display(),
+                    "shift_name": record.shift.name,
+                    "check_in": log_data.get("check_in"),
+                    "check_out": log_data.get("check_out"),
+                    "branch_in": log_data.get("branch_in"),
+                    "branch_out": log_data.get("branch_out"),
+                    "leave_type": leave_info["leave_type"] if leave_info else None,
+                    "leave_reason": leave_info["reason"] if leave_info else None,
+                })
+
+            # ✅ Pagination (30 รายการต่อหน้า)
+            paginator = Paginator(records, 30)
+            page_number = request.GET.get("page")
+            page_obj = paginator.get_page(page_number)
+
+        except ValueError:
+            return render(request, "attendance/attendance_history.html", {
+                "error": "รูปแบบวันที่ไม่ถูกต้อง กรุณาเลือกใหม่"
+            })
+
+    return render(request, "attendance/attendance_history.html", {
+        "records": page_obj,
+        "start_date": start_date.strftime("%Y-%m-%d") if start_date else "",
+        "end_date": end_date.strftime("%Y-%m-%d") if end_date else "",
+        "branches": branches,
+    })
+
+
+@login_required(login_url="log-in")
+@csrf_exempt
+def request_edit_time(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            entries = data.get("entries", [])
+
+            if not entries:
+                return JsonResponse({"success": False, "error": "ไม่มีข้อมูลที่ต้องบันทึก"}, status=400)
+
+            user = request.user
+            staff = BsnStaff.objects.filter(django_usr_id=user).first()
+
+            if not staff:
+                return JsonResponse({"success": False, "error": "ไม่พบข้อมูลพนักงาน"}, status=400)
+
+            approver = BsnStaff.objects.filter(staff_id=staff.mng_staff_id).first()
+            if not approver:
+                return JsonResponse({"success": False, "error": "ไม่พบผู้อนุมัติ"}, status=400)
+
+            approver_user = approver.django_usr_id
+
+            edit_time_entries = []
+            approval_entries = []
+
+            for entry in entries:
+                date = entry.get("date")
+                branch_in = entry.get("branch_in")
+                check_in = entry.get("check_in")
+                branch_out = entry.get("branch_out")
+                check_out = entry.get("check_out")
+
+                # ✅ ตรวจสอบว่าข้อมูลเปลี่ยนแปลงหรือไม่
+                existing_in = EditTimeAttendance.objects.filter(
+                    user=user, date=date, branch_id=branch_in, timestamp=check_in
+                ).exists()
+
+                existing_out = EditTimeAttendance.objects.filter(
+                    user=user, date=date, branch_id=branch_out, timestamp=check_out
+                ).exists()
+
+                if not existing_in:
+                    edit_time_entries.append(
+                        EditTimeAttendance(
+                            user=user,
+                            approve_user=approver_user,
+                            date=date,
+                            branch_id=branch_in,
+                            timestamp=check_in,
+                            status="pending"
+                        )
+                    )
+
+                    approval_entries.append(
+                        Approval(
+                            request_user=user,
+                            approve_user=approver_user,
+                            approval_type="edit_time",
+                            date=date,
+                            branch_id=branch_in,
+                            timestamp=check_in,
+                            status="pending"
+                        )
+                    )
+
+                if not existing_out:
+                    edit_time_entries.append(
+                        EditTimeAttendance(
+                            user=user,
+                            approve_user=approver_user,
+                            date=date,
+                            branch_id=branch_out,
+                            timestamp=check_out,
+                            status="pending"
+                        )
+                    )
+
+                    approval_entries.append(
+                        Approval(
+                            request_user=user,
+                            approve_user=approver_user,
+                            approval_type="edit_time",
+                            date=date,
+                            branch_id=branch_out,
+                            timestamp=check_out,
+                            status="pending"
+                        )
+                    )
+
+            # ✅ บันทึกเฉพาะรายการที่มีการเปลี่ยนแปลง
+            if edit_time_entries:
+                EditTimeAttendance.objects.bulk_create(edit_time_entries)
+            if approval_entries:
+                Approval.objects.bulk_create(approval_entries)
+
+            return JsonResponse({"success": True})
+
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "error": "JSON ไม่ถูกต้อง"}, status=400)
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+    return JsonResponse({"success": False, "error": "วิธีการร้องขอไม่ถูกต้อง"}, status=405)

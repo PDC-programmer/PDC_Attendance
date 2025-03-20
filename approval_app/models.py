@@ -52,7 +52,7 @@ class Approval(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
     image = models.ImageField(upload_to=leave_request_image_path, null=True, blank=True)
     branch = models.ForeignKey(BsnBranch, on_delete=models.DO_NOTHING, null=True, blank=True)
-    timestamp = models.DateTimeField(null=True, blank=True)
+    timestamp = models.TimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(null=True, blank=True)
 

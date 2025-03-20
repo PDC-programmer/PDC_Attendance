@@ -14,6 +14,7 @@
                     <option value="">ทั้งหมด</option>
                     <option value="leave" {% if approval_type_filter == "leave" %}selected{% endif %}>ขอลา</option>
                     <option value="shift" {% if approval_type_filter == "shift" %}selected{% endif %}>เปลี่ยนกะ</option>
+                    <option value="edit_time" {% if approval_type_filter == "edit_time" %}selected{% endif %}>แก้ไขเวลา</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -22,7 +23,7 @@
                     <option value="">ทั้งหมด</option>
                     <option value="pending" {% if status == "pending" %}selected{% endif %}>รออนุมัติ</option>
                     <option value="approved" {% if status == "approved" %}selected{% endif %}>อนุมัติ</option>
-                    <option value="rejectd" {% if status == "rejectd" %}selected{% endif %}>ปฏิเสธ</option>
+                    <option value="rejected" {% if status == "rejected" %}selected{% endif %}>ปฏิเสธ</option>
                     <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>ยกเลิก</option>
                 </select>
             </div>
@@ -63,19 +64,16 @@
                                     <span class="badge bg-info">ขอลา</span>
                                 {% elif approval.approval_type == "shift" %}
                                     <span class="badge bg-warning">เปลี่ยนกะ</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if approval.approval_type == "leave" %}
-                                    {{ approval.start_datetime|date:"d/m/Y H:i" }} - {{ approval.end_datetime|date:"d/m/Y H:i" }}
-                                {% else %}
-                                    {{ approval.date|date:"d/m/Y" }}
+                                {% elif approval.approval_type == "edit_time" %}
+                                    <span class="badge bg-primary">แก้ไขเวลางาน</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if approval.approval_type == "leave" %}
                                     {{ approval.start_datetime|date:"d/m/Y H:i" }} - {{ approval.end_datetime|date:"d/m/Y H:i" }}
                                 {% elif approval.approval_type == "shift" %}
+                                    {{ approval.date|date:"d/m/Y" }}
+                                {% elif approval.approval_type == "edit_time" %}
                                     {{ approval.date|date:"d/m/Y" }}
                                 {% endif %}
                             </td>
@@ -84,6 +82,8 @@
                                     {{ approval.leave_type.th_name }}
                                 {% elif approval.approval_type == "shift" %}
                                     {{ approval.get_shift_day_display }} ({{ approval.shift.name }} น.)
+                                {% elif approval.approval_type == "edit_time" %}
+                                    {{ approval.timestamp|time:"H:i" }} น. ({{ approval.branch.brc_sname }})
                                 {% endif %}
                             </td>
                             <td>
