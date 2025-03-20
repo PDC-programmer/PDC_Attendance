@@ -1,4 +1,7 @@
-#media/
+media/
+media
+leave_request_images/
+leave_request_images
 venv
 staticfiles
 __pycache__

@@ -1,0 +1,230 @@
+{% extends "general/base.html" %}
+{% block title %}ประวัติการเข้าออกงาน{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+    <div class="container" style="width: 95%;">
+        <h1 class="text-center mb-4">📌 ประวัติการเข้าออกงาน</h1>
+
+        <!-- 🔍 ค้นหาตามวันที่ -->
+        <form method="GET" class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">📅 วันที่เริ่มต้น</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">📅 วันที่สิ้นสุด</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 align-self-end">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i> ค้นหา</button>
+            </div>
+        </form>
+
+        <hr>
+
+        {% if error %}
+            <div class="alert alert-danger text-center">{{ error }}</div>
+        {% elif records %}
+            <button class="btn btn-warning btn-sm mb-3" id="toggleEditMode"><i class="bi bi-pencil-square"></i> แก้ไข</button>
+
+            <div class="table-responsive">
+                <table class="table table-hover mt-4 text-center align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>วันที่</th>
+                            <th>ประเภท</th>
+                            <th>กะงาน</th>
+                            <th>ประเภทวันลา</th>
+                            <th>เวลาเข้า / สาขา</th>
+                            <th class="edit-column d-none">สาขาเข้า (แก้ไข)</th>
+                            <th class="edit-column d-none">เวลาเข้า (แก้ไข)</th>
+                            <th>เวลาออก / สาขา</th>
+                            <th class="edit-column d-none">สาขาออก (แก้ไข)</th>
+                            <th class="edit-column d-none">เวลาออก (แก้ไข)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td><strong>{{ record.date|date:"d/m/Y" }}</strong></td>
+
+                            <!-- 🏷️ ประเภทวันทำงาน -->
+                            <td>
+                                <span class="badge {% if record.shift_day == 'วันทำงาน' %}bg-success{% elif record.shift_day == 'วันหยุดของพนักงาน' %}bg-secondary{% else %}bg-danger{% endif %}">
+                                    {{ record.shift_day }}
+                                </span>
+                            </td>
+
+                            <!-- 🏷️ กะงาน -->
+                            <td>
+                                {% if record.shift_name %}
+                                    <span class="badge bg-info text-dark">{{ record.shift_name }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- 🏷️ ประเภทวันลา -->
+                            <td>
+                                {% if record.leave_type %}
+                                    <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" title="{{ record.leave_reason }}">
+                                        {{ record.leave_type }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- 🕒 เวลาเข้า -->
+                            <td>
+                                {% if record.check_in %}
+                                    <small class="text-muted">({{ record.branch_in }})</small>
+                                    <span class="badge bg-primary"><i class="bi bi-arrow-right-circle"></i> {{ record.check_in|date:"H:i" }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- ✏ สาขาเข้า (แก้ไข) -->
+                            <td class="edit-column d-none">
+                                <select class="form-select branch-in">
+                                    {% for branch in branches %}
+                                        <option value="{{ branch.id }}" {% if branch.brc_sname == record.branch_in %}selected{% endif %}>{{ branch.brc_sname }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+
+                            <!-- ⏰ เวลาเข้า (แก้ไข) -->
+                            <td class="edit-column d-none">
+                                <input type="time" class="form-control check-in-time" value="{{ record.check_in|time:'H:i' }}">
+                            </td>
+
+                            <!-- 🕒 เวลาออก -->
+                            <td>
+                                {% if record.check_out %}
+                                    <small class="text-muted">({{ record.branch_out }})</small>
+                                    <span class="badge bg-danger"><i class="bi bi-arrow-left-circle"></i> {{ record.check_out|date:"H:i" }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- ✏ สาขาออก (แก้ไข) -->
+                            <td class="edit-column d-none">
+                                <select class="form-select branch-out">
+                                    {% for branch in branches %}
+                                        <option value="{{ branch.id }}" {% if branch.brc_sname == record.branch_out %}selected{% endif %}>{{ branch.brc_sname }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+
+                            <!-- ⏰ เวลาออก (แก้ไข) -->
+                            <td class="edit-column d-none">
+                                <input type="time" class="form-control check-out-time" value="{{ record.check_out|time:'H:i' }}">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn btn-success btn-sm mt-3 d-none" id="saveChanges"><i class="bi bi-save"></i> บันทึก</button>
+
+        <!-- ✅ Pagination -->
+            <nav aria-label="Pagination">
+                <ul class="pagination justify-content-center mt-3">
+                    {% if records.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ records.previous_page_number }}">
+                                &laquo;
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">{{ records.number }} / {{ records.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if records.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ records.next_page_number }}">
+                                &raquo;
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+
+        {% else %}
+            <p class="text-center text-muted mt-4">กรุณาเลือกช่วงวันที่แล้วกด "ค้นหา"</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ✅ JavaScript -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const toggleEditBtn = document.getElementById("toggleEditMode");
+        const saveChangesBtn = document.getElementById("saveChanges");
+        const editColumns = document.querySelectorAll(".edit-column");
+
+        toggleEditBtn.addEventListener("click", function () {
+            editColumns.forEach(el => el.classList.toggle("d-none"));
+            saveChangesBtn.classList.toggle("d-none");
+        });
+
+        saveChangesBtn.addEventListener("click", function () {
+            alert("🔄 กำลังบันทึกข้อมูล...");
+            const records = document.querySelectorAll("tbody tr");
+            let entries = [];
+
+            records.forEach(row => {
+                const date = row.querySelector("td:first-child").innerText.trim();
+                const branchIn = row.querySelector(".branch-in").value;
+                const checkInTime = row.querySelector(".check-in-time").value;
+                const branchOut = row.querySelector(".branch-out").value;
+                const checkOutTime = row.querySelector(".check-out-time").value;
+
+                if (checkInTime && checkOutTime) {
+                    entries.push({
+                        "date": date.split("/").reverse().join("-"), // แปลงเป็น YYYY-MM-DD
+                        "branch_in": branchIn,
+                        "check_in": checkInTime,
+                        "branch_out": branchOut,
+                        "check_out": checkOutTime
+                    });
+                }
+            });
+
+            if (entries.length === 0) {
+                alert("❌ โปรดกรอกข้อมูลให้ครบก่อนบันทึก!");
+                return;
+            }
+
+            fetch("{% url 'request_edit_time' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ "entries": entries })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert("✅ บันทึกสำเร็จ!");
+                    location.reload();
+                } else {
+                    alert("❌ บันทึกไม่สำเร็จ: " + data.error);
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("❌ เกิดข้อผิดพลาดในการส่งข้อมูล");
+            });
+        });
+    });
+</script>
+
+{% endblock %}

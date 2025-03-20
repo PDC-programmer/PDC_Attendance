@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Approval
-from attendance_app.models import LeaveAttendance, ShiftSchedule
+from attendance_app.models import LeaveAttendance, ShiftSchedule, EditTimeAttendance
 from django.utils.timezone import now
 
 
@@ -35,6 +35,19 @@ def update_attendance_or_shift(sender, instance, created, **kwargs):
                 shift_schedule.updated_at = now()
                 shift_schedule.save()
 
+        elif instance.approval_type == "edit_time":
+            edit_attendance = EditTimeAttendance.objects.filter(
+                date=instance.date, status="pending", approve_user=instance.approve_user, user=instance.request_user,
+                branch=instance.branch, timestamp=instance.timestamp
+            ).first()
+
+            if edit_attendance:
+                edit_attendance.status = "approved"
+                edit_attendance.save()
+
+                instance.edit_time_attendance = edit_attendance
+                instance.save()
+
     elif instance.status == "rejected":
         if instance.approval_type == "leave":
             # ปฏิเสธคำขอลา
@@ -45,6 +58,19 @@ def update_attendance_or_shift(sender, instance, created, **kwargs):
             if leave_attendance:
                 leave_attendance.status = "rejected"
                 leave_attendance.save()
+
+        elif instance.approval_type == "edit_time":
+            edit_attendance = EditTimeAttendance.objects.filter(
+                date=instance.date, status="pending", approve_user=instance.approve_user, user=instance.request_user,
+                branch=instance.branch, timestamp=instance.timestamp
+            ).first()
+
+            if edit_attendance:
+                edit_attendance.status = "rejected"
+                edit_attendance.save()
+
+                instance.edit_time_attendance = edit_attendance
+                instance.save()
 
     elif instance.status == "cancelled":
         if instance.approval_type == "leave":

@@ -56,7 +56,7 @@ def approval_list(request):
     approvals = approvals.order_by("-created_at")  # เรียงจากใหม่ไปเก่า
 
     # ✅ Pagination
-    paginator = Paginator(approvals, 20)  # แสดง 20 รายการต่อหน้า
+    paginator = Paginator(approvals, 30)  # แสดง 30 รายการต่อหน้า
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
@@ -94,7 +94,7 @@ def approval_list_request_user(request):
     approvals = approvals.order_by("-created_at")  # เรียงจากใหม่ไปเก่า
 
     # ✅ Pagination
-    paginator = Paginator(approvals, 20)  # แสดง 20 รายการต่อหน้า
+    paginator = Paginator(approvals, 30)  # แสดง 30 รายการต่อหน้า
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 

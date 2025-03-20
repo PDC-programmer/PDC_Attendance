@@ -110,7 +110,7 @@ class EditTimeAttendance(models.Model):
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING, related_name="edit_time_attendance")
     date = models.DateField(null=True, blank=True)
     branch = models.ForeignKey(BsnBranch, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="edit_time_attendance")
-    timestamp = models.DateTimeField(null=True, blank=True)
+    timestamp = models.TimeField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=[('approved', 'อนุมัติ'),
                                                       ('pending', 'รออนุมัติ'),
                                                       ('rejected', 'ปฏิเสธ'),
