@@ -88,7 +88,7 @@
 
                             <!-- ✏ สาขาเข้า (แก้ไข) -->
                             <td class="edit-column d-none">
-                                <select class="form-select branch-in">
+                                <select class="form-select form-select-sm branch-in text-center form-input">
                                     {% for branch in branches %}
                                         <option value="{{ branch.id }}" {% if branch.brc_sname == record.branch_in %}selected{% endif %}>{{ branch.brc_sname }}</option>
                                     {% endfor %}
@@ -97,7 +97,22 @@
 
                             <!-- ⏰ เวลาเข้า (แก้ไข) -->
                             <td class="edit-column d-none">
-                                <input type="time" class="form-control check-in-time" value="{{ record.check_in|time:'H:i' }}">
+                                <div class="d-flex gap-1">
+                                    <small class="text-center">ชม./นาที</small>
+                                    <select class="form-select form-select-sm check-in-hour text-center form-input">
+                                        <option value="" {% if record.check_in and record.check_in.hour == hour %}selected{% endif %}></option>
+                                        {% for hour in hours %}
+                                            <option value="{{ hour }}" {% if record.check_in and record.check_in.hour == hour %}selected{% endif %}>{{ hour }}</option>
+                                        {% endfor %}
+                                    </select>
+
+                                    <select class="form-select form-select-sm check-in-minute text-center form-input">
+                                        <option value="" {% if record.check_in and record.check_in.minute == minute %}selected{% endif %}></option>
+                                        {% for minute in minutes %}
+                                            <option value="{{ minute }}" {% if record.check_in and record.check_in.minute == minute %}selected{% endif %}>{{ minute }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </td>
 
                             <!-- 🕒 เวลาออก -->
@@ -112,7 +127,7 @@
 
                             <!-- ✏ สาขาออก (แก้ไข) -->
                             <td class="edit-column d-none">
-                                <select class="form-select branch-out">
+                                <select class="form-select form-select-sm branch-out text-center form-input">
                                     {% for branch in branches %}
                                         <option value="{{ branch.id }}" {% if branch.brc_sname == record.branch_out %}selected{% endif %}>{{ branch.brc_sname }}</option>
                                     {% endfor %}
@@ -121,7 +136,22 @@
 
                             <!-- ⏰ เวลาออก (แก้ไข) -->
                             <td class="edit-column d-none">
-                                <input type="time" class="form-control check-out-time" value="{{ record.check_out|time:'H:i' }}">
+                                <div class="d-flex gap-1">
+                                    <small class="text-center">ชม./นาที</small>
+                                    <select class="form-select form-select-sm check-out-hour text-center form-input">
+                                        <option value="" {% if record.check_out and record.check_out.hour == hour %}selected{% endif %}></option>
+                                        {% for hour in hours %}
+                                            <option value="{{ hour }}" {% if record.check_out and record.check_out.hour == hour %}selected{% endif %}>{{ hour }}</option>
+                                        {% endfor %}
+                                    </select>
+
+                                    <select class="form-select form-select-sm check-out-minute text-center form-input">
+                                        <option value="" {% if record.check_out and record.check_out.minute == minute %}selected{% endif %}></option>
+                                        {% for minute in minutes %}
+                                            <option value="{{ minute }}" {% if record.check_out and record.check_out.minute == minute %}selected{% endif %}>{{ minute }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -175,16 +205,21 @@
         });
 
         saveChangesBtn.addEventListener("click", function () {
-            alert("🔄 กำลังบันทึกข้อมูล...");
             const records = document.querySelectorAll("tbody tr");
             let entries = [];
 
             records.forEach(row => {
                 const date = row.querySelector("td:first-child").innerText.trim();
                 const branchIn = row.querySelector(".branch-in").value;
-                const checkInTime = row.querySelector(".check-in-time").value;
                 const branchOut = row.querySelector(".branch-out").value;
-                const checkOutTime = row.querySelector(".check-out-time").value;
+
+                const checkInHour = row.querySelector(".check-in-hour").value;
+                const checkInMinute = row.querySelector(".check-in-minute").value;
+                const checkOutHour = row.querySelector(".check-out-hour").value;
+                const checkOutMinute = row.querySelector(".check-out-minute").value;
+
+                const checkInTime = checkInHour && checkInMinute ? `${checkInHour}:${checkInMinute}` : null;
+                const checkOutTime = checkOutHour && checkOutMinute ? `${checkOutHour}:${checkOutMinute}` : null;
 
                 if (checkInTime && checkOutTime) {
                     entries.push({
@@ -198,33 +233,75 @@
             });
 
             if (entries.length === 0) {
-                alert("❌ โปรดกรอกข้อมูลให้ครบก่อนบันทึก!");
+                Swal.fire({
+                    icon: "warning",
+                    title: "⚠ ไม่มีการเปลี่ยนแปลง",
+                    text: "โปรดแก้ไขข้อมูลก่อนกดบันทึก!",
+                    confirmButtonText: "ตกลง"
+                });
                 return;
             }
 
-            fetch("{% url 'request_edit_time' %}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": "{{ csrf_token }}"
-                },
-                body: JSON.stringify({ "entries": entries })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert("✅ บันทึกสำเร็จ!");
-                    location.reload();
-                } else {
-                    alert("❌ บันทึกไม่สำเร็จ: " + data.error);
+            Swal.fire({
+                title: "ยืนยันการบันทึก?",
+                text: "คุณต้องการบันทึกข้อมูลที่แก้ไขหรือไม่",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "บันทึก",
+                cancelButtonText: "ยกเลิก"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: "กำลังบันทึก...",
+                        text: "โปรดรอสักครู่",
+                        icon: "info",
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    fetch("{% url 'request_edit_time' %}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token }}"
+                        },
+                        body: JSON.stringify({ "entries": entries })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: "success",
+                                title: "บันทึกสำเร็จ!",
+                                text: "ข้อมูลของคุณได้รับการอัปเดตแล้ว",
+                                confirmButtonText: "ตกลง"
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: "error",
+                                title: "เกิดข้อผิดพลาด!",
+                                text: data.error || "ไม่สามารถบันทึกข้อมูลได้",
+                                confirmButtonText: "ตกลง"
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                        Swal.fire({
+                            icon: "error",
+                            title: "เกิดข้อผิดพลาด!",
+                            text: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้",
+                            confirmButtonText: "ตกลง"
+                        });
+                    });
                 }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                alert("❌ เกิดข้อผิดพลาดในการส่งข้อมูล");
             });
         });
     });
 </script>
-
 {% endblock %}

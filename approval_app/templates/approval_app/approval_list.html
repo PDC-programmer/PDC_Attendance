@@ -114,7 +114,7 @@
                 <ul class="pagination justify-content-center mt-3">
                     {% if approvals.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ approvals.previous_page_number }}">&laquo;</a>
+                            <a class="page-link" href="?search={{search}}&approval_type={{approval_type}}&status={{status}}&page={{ approvals.previous_page_number }}">&laquo;</a>
                         </li>
                     {% endif %}
 
@@ -124,7 +124,7 @@
 
                     {% if approvals.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ approvals.next_page_number }}">&raquo;</a>
+                            <a class="page-link" href="?search={{search}}&approval_type={{approval_type}}&status={{status}}&page={{ approvals.next_page_number }}">&raquo;</a>
                         </li>
                     {% endif %}
                 </ul>

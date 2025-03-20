@@ -82,3 +82,18 @@ def update_attendance_or_shift(sender, instance, created, **kwargs):
             if leave_attendance:
                 leave_attendance.status = "cancelled"
                 leave_attendance.save()
+
+        elif instance.approval_type == "edit_time":
+            edit_attendance = EditTimeAttendance.objects.filter(
+                date=instance.date, status="pending", approve_user=instance.approve_user, user=instance.request_user,
+                branch=instance.branch, timestamp=instance.timestamp
+            ).first()
+
+            if edit_attendance:
+                edit_attendance.status = "cancelled"
+                edit_attendance.save()
+
+                instance.edit_time_attendance = edit_attendance
+                instance.save()
+
+
