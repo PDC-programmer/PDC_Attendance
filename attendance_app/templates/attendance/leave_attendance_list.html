@@ -20,15 +20,31 @@
             </div>
 
             <div class="col-md-4">
-                <label for="status" class="form-label">สถานะ</label>
-                <select name="status" id="status" class="form-select form-input">
-                    <option value="">เลือกสถานะ</option>
-                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>อนุมัติ</option>
-                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>รออนมุติ</option>
-                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>ปฏิเสธ</option>
-                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>ยกเลิก</option>
-                </select>
+                <label class="form-label">สถานะ</label>
+                <div class="row g-1">
+                <div class="form-check col-sm">
+                    <input class="form-check-input" type="checkbox" name="status" value="approved"
+                        {% if 'approved' in status_filter %}checked{% endif %}>
+                    <label class="form-check-label">อนุมัติ</label>
+                </div>
+                <div class="form-check col-sm">
+                    <input class="form-check-input" type="checkbox" name="status" value="pending"
+                        {% if 'pending' in status_filter %}checked{% endif %}>
+                    <label class="form-check-label">รออนุมัติ</label>
+                </div>
+                <div class="form-check col-sm">
+                    <input class="form-check-input" type="checkbox" name="status" value="rejected"
+                        {% if 'rejected' in status_filter %}checked{% endif %}>
+                    <label class="form-check-label">ปฏิเสธ</label>
+                </div>
+                <div class="form-check col-sm">
+                    <input class="form-check-input" type="checkbox" name="status" value="cancelled"
+                        {% if 'cancelled' in status_filter %}checked{% endif %}>
+                    <label class="form-check-label">ยกเลิก</label>
+                </div>
+                </div>
             </div>
+
 
             <div class="col-md-7">
                 <label for="search" class="form-label">ค้นหา</label>
@@ -45,11 +61,14 @@
         <!-- ฟอร์มสำหรับ Export Excel -->
         <form method="GET" action="{% url 'export_leave_attendance_excel' %}">
             <input type="hidden" name="search" value="{{ search_query }}">
-            <input type="hidden" name="status" value="{{ status_filter }}">
+            {% for status in status_filter %}
+                <input type="hidden" name="status" value="{{ status }}">
+            {% endfor %}
             <input type="hidden" name="start_date" value="{{ start_date }}">
             <input type="hidden" name="end_date" value="{{ end_date }}">
-            <button type="submit" class="btn btn-success mb-3 btn-sm">Export as Excel</button>
+            <button type="submit" class="btn btn-success mb-3 btn-sm">Export Excel</button>
         </form>
+
 
         <!-- ตารางแสดงข้อมูล -->
         <div class="table-responsive">
