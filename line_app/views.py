@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from django.contrib.auth.models import User
-from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveBalanceInitial
+from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveBalanceInitial,LeaveType
 from line_app.models import UserProfile
 from user_app.models import User, BsnStaff
 from branch_app.models import BsnBranch
@@ -62,7 +62,9 @@ def register_line_id(request):
             # ค้นหา LeaveBalanceInitial ตาม staff_code
             leave_balances_initial = LeaveBalanceInitial.objects.filter(staff_code=staff_code)
             if not leave_balances_initial.exists():
-                leave_type_list = [2,4]
+
+                leave_type_list = LeaveType.objects.filter(id__in=[2, 4])
+
                 for leave_type in leave_type_list:
                     LeaveBalance.objects.create(
                         user=user,

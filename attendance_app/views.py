@@ -29,6 +29,8 @@ from django.utils.timezone import make_aware
 from django.db.models import Min, Max
 from geopy.distance import geodesic  # ใช้สำหรับคำนวณระยะทาง
 from branch_app.models import BsnBranch
+from django.db.models import Q, Prefetch
+from django.utils.timezone import localtime
 
 # Initialize LineBotApi
 line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -526,29 +528,34 @@ def is_staff_check(user):
 @login_required(login_url='log-in')
 @user_passes_test(is_staff_check)
 def leave_attendance_list(request):
-    # รับค่าค้นหาและฟิลเตอร์จาก request GET
     search_query = request.GET.get('search', '')
-    status_filter = request.GET.get('status', '')
+    status_filter = request.GET.getlist('status', '')  # ✅ รองรับหลายค่า
     start_date = request.GET.get('start_date', '')
     end_date = request.GET.get('end_date', '')
 
-    # ตรวจสอบว่ามีเงื่อนไขการค้นหาหรือไม่
     is_searching = any([search_query, status_filter, start_date, end_date])
 
-    # ถ้าไม่มีการค้นหา ให้แสดงผลลัพธ์เป็นค่าว่าง
     if not is_searching:
         return render(request, 'attendance/leave_attendance_list.html', {
-            'data': None,  # ส่งค่า None ไปยัง template
+            'data': None,
             'search_query': search_query,
             'status_filter': status_filter,
             'start_date': start_date,
             'end_date': end_date
         })
 
-    # Query เบื้องต้น
-    leave_attendances = LeaveAttendance.objects.select_related('user')
+    # เตรียม queryset พนักงานไว้ใช้ร่วมกัน
+    staff_map = {
+        s.django_usr_id_id: s
+        for s in BsnStaff.objects.select_related('brc_id').all()
+    }
 
-    # ถ้ามีการค้นหา
+    # ดึง leave_attendance พร้อม user และ leave_type
+    leave_attendances = LeaveAttendance.objects.select_related(
+        'user', 'approve_user', 'leave_type'
+    )
+
+    # Filters
     if search_query:
         leave_attendances = leave_attendances.filter(
             Q(user__first_name__icontains=search_query) |
@@ -557,43 +564,45 @@ def leave_attendance_list(request):
             Q(leave_type__th_name__icontains=search_query)
         )
 
-    # ถ้ามีการกรองสถานะ
+    # เฉพาะตรง Filter สถานะ
     if status_filter:
-        leave_attendances = leave_attendances.filter(status=status_filter)
+        leave_attendances = leave_attendances.filter(status__in=status_filter)
 
-    # ถ้ามีการกรองวันที่
     if start_date and end_date:
         leave_attendances = leave_attendances.filter(
             start_datetime__date__gte=start_date,
             start_datetime__date__lte=end_date
         )
 
-    # เตรียมข้อมูลสำหรับ Template
+    # เตรียมข้อมูล
     data = []
     for attendance in leave_attendances:
-        total_duration = calculate_working_hours(attendance.user, attendance.start_datetime, attendance.end_datetime)
+        user = attendance.user
+        bsn_staff = staff_map.get(user.id)
+        total_duration = calculate_working_hours(user, attendance.start_datetime, attendance.end_datetime)
+
         leave_hours = f"{total_duration // 8:.0f} วัน" if total_duration >= 8 else f"{total_duration:.1f} ชม."
-        bsn_staff = BsnStaff.objects.filter(django_usr_id=attendance.user).first()
-        forward_or_backward_days = (attendance.start_datetime - attendance.created_at).days
-        n_name = f"{attendance.user.nick_name}" if attendance.user.nick_name is not None else '-'
+        forward_days = (attendance.start_datetime - attendance.created_at).days
+        n_name = user.nick_name or '-'
+
         data.append({
             'date_range': f"{attendance.start_datetime:%d/%m/%Y} - {attendance.end_datetime:%d/%m/%Y}",
-            'staff_code': bsn_staff.staff_code if bsn_staff else 'N/A',
-            'full_name': f"{attendance.user.first_name} {attendance.user.last_name}",
+            'staff_code': getattr(bsn_staff, 'staff_code', 'N/A'),
+            'full_name': f"{user.first_name} {user.last_name}",
             'nickname': n_name,
-            'position': bsn_staff.staff_title if bsn_staff else 'N/A',
-            'branch': bsn_staff.brc_id.brc_sname if bsn_staff else 'N/A',
+            'position': getattr(bsn_staff, 'staff_title', 'N/A'),
+            'branch': getattr(getattr(bsn_staff, 'brc_id', None), 'brc_sname', 'N/A'),
             'leave_type': attendance.leave_type.th_name if attendance.leave_type else 'N/A',
-            'request_by': f"{attendance.user.first_name} {attendance.user.last_name}",
+            'request_by': f"{user.first_name} {user.last_name}",
             'request_date': f"{attendance.created_at:%d/%m/%Y %H:%M} น.",
             'status': attendance.get_status_display(),
             'approved_by': f"{attendance.approve_user.first_name} {attendance.approve_user.last_name}" if attendance.approve_user else 'N/A',
             'updated_at': f"{attendance.updated_at:%d/%m/%Y %H:%M} น." if attendance.updated_at is not None else '-',
-            'details': f"{attendance.user.first_name} {attendance.user.last_name} ({n_name}) ยื่นขอ \"{attendance.leave_type.th_name if attendance.leave_type else 'N/A'}\" ขอลางาน ตั้งแต่วันที่ {attendance.start_datetime:%d/%m/%Y %H:%M} ถึงวันที่ {attendance.end_datetime:%d/%m/%Y %H:%M} หมายเหตุ : {attendance.reason}",
+            'details': f"{user.first_name} {user.last_name} ({n_name}) ยื่นขอ \"{attendance.leave_type.th_name if attendance.leave_type else 'N/A'}\" ขอลางาน ตั้งแต่วันที่ {attendance.start_datetime:%d/%m/%Y %H:%M} ถึงวันที่ {attendance.end_datetime:%d/%m/%Y %H:%M} หมายเหตุ : {attendance.reason}",
             'hours': leave_hours,
             'total_days': leave_hours,
             'amount': '0.00',
-            'forward_or_backward': f'ย้อนหลัง {forward_or_backward_days * (-1)} วัน' if attendance.start_datetime < attendance.created_at else f'ล่วงหน้า {forward_or_backward_days} วัน'
+            'forward_or_backward': f'ย้อนหลัง {abs(forward_days)} วัน' if forward_days < 0 else f'ล่วงหน้า {forward_days} วัน'
         })
 
     return render(request, 'attendance/leave_attendance_list.html', {
@@ -610,7 +619,7 @@ def leave_attendance_list(request):
 def export_leave_attendance_excel(request):
     # รับค่าการค้นหาและฟิลเตอร์จาก request GET
     search_query = request.GET.get('search', '')
-    status_filter = request.GET.get('status', '')
+    status_filter = request.GET.getlist('status', '')  # ✅ รองรับหลายค่า
     start_date = request.GET.get('start_date', '')
     end_date = request.GET.get('end_date', '')
 
@@ -628,7 +637,7 @@ def export_leave_attendance_excel(request):
 
     # ถ้ามีการกรองสถานะ
     if status_filter:
-        leave_attendances = leave_attendances.filter(status=status_filter)
+        leave_attendances = leave_attendances.filter(status__in=status_filter)
 
     # ถ้ามีการกรองวันที่
     if start_date and end_date:
@@ -1138,7 +1147,7 @@ def search_attendance(request):
 
 
 def find_nearest_branch(lat, lng):
-    """ ค้นหาสาขาที่ใกล้ที่สุดจาก GPS """
+    """ ค้นหาสาขาที่ใกล้ที่สุดจาก GPS โดยต้องไม่เกิน 100 เมตร """
     try:
         branches = BsnBranch.objects.all().values("id", "brc_sname", "gps_lat", "gps_lng")
         min_distance = float("inf")
@@ -1147,13 +1156,17 @@ def find_nearest_branch(lat, lng):
         for branch in branches:
             branch_lat = float(branch["gps_lat"])
             branch_lng = float(branch["gps_lng"])
-            distance = geodesic((lat, lng), (branch_lat, branch_lng)).meters  # คำนวณระยะทางเป็นเมตร
+            distance = geodesic((lat, lng), (branch_lat, branch_lng)).meters
 
             if distance < min_distance:
                 min_distance = distance
-                nearest_branch = branch["brc_sname"]  # ใช้ชื่อสาขาแทน
+                nearest_branch = branch["brc_sname"]
 
-        return nearest_branch if nearest_branch else "ไม่พบสาขา"
+        # ✅ ตรวจสอบว่าระยะห่างไม่เกิน 100 เมตร
+        if min_distance <= 100:
+            return nearest_branch
+        else:
+            return "ไม่พบสาขา"
 
     except Exception as e:
         print(f"❌ Error finding nearest branch: {e}")
@@ -1174,8 +1187,8 @@ def employee_attendance_history(request):
 
     if start_date and end_date:
         try:
-            start_date = parse_date(start_date)
-            end_date = parse_date(end_date)
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
 
             if not (start_date and end_date):
                 raise ValueError("Invalid date format")
@@ -1184,6 +1197,11 @@ def employee_attendance_history(request):
             attendance_records = ShiftSchedule.objects.filter(
                 user=user, status="approved", date__range=[start_date, end_date]
             ).select_related("shift").order_by("-date")
+
+            if not attendance_records:
+                return render(request, "attendance/attendance_history.html", {
+                    "error": "ไม่พบข้อมูลตารางกะ กรุณาเลือกเวลากะก่อน !"
+                })
 
             # ✅ โหลดข้อมูลการลาที่ได้รับอนุมัติของพนักงาน
             leave_records = LeaveAttendance.objects.filter(
@@ -1319,7 +1337,7 @@ def employee_attendance_history(request):
 
         except ValueError:
             return render(request, "attendance/attendance_history.html", {
-                "error": "รูปแบบวันที่ไม่ถูกต้อง กรุณาเลือกใหม่"
+                "error": "เกิดข้อผิดพลาด กรุณาลองใหม่ !"
             })
 
     return render(request, "attendance/attendance_history.html", {
