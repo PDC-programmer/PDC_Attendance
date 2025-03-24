@@ -7,7 +7,7 @@
         <h1 class="text-center mb-4">📌 ประวัติการเข้าออกงาน</h1>
 
         <!-- 🔍 ค้นหาตามวันที่ -->
-        <form method="GET" class="row g-3 mb-3">
+        <form method="GET" class="row g-3 mb-3" id="search-form">
             <div class="col-md-4">
                 <label class="form-label fw-bold">📅 วันที่เริ่มต้น</label>
                 <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
@@ -32,6 +32,7 @@
                 <table class="table table-hover mt-4 text-center align-middle">
                     <thead class="table-light">
                         <tr>
+                            <th style="width: 30px;"><input type="checkbox" id="select-all"></th>
                             <th>วันที่</th>
                             <th>ประเภท</th>
                             <th>กะงาน</th>
@@ -47,6 +48,7 @@
                     <tbody>
                         {% for record in records %}
                         <tr>
+                            <td><input type="checkbox" class="row-checkbox"></td>
                             <td><strong>{{ record.date|date:"d/m/Y" }}</strong></td>
 
                             <!-- 🏷️ ประเภทวันทำงาน -->
@@ -195,6 +197,29 @@
 <!-- ✅ JavaScript -->
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        // ✅ เพิ่ม Loading ตอนกดปุ่ม "ค้นหา"
+        const searchForm = document.getElementById("search-form");
+        if (searchForm) {
+            searchForm.addEventListener("submit", function (e) {
+                e.preventDefault(); // ป้องกันการ submit ทันที
+
+                Swal.fire({
+                    title: "กำลังค้นหา...",
+                    text: "กรุณารอสักครู่",
+                    icon: "info",
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // ✅ ส่งฟอร์มหลังจาก delay สั้น ๆ เพื่อให้ Swal แสดงทัน
+                setTimeout(() => {
+                    searchForm.submit();
+                }, 200);
+            });
+        }
         const toggleEditBtn = document.getElementById("toggleEditMode");
         const saveChangesBtn = document.getElementById("saveChanges");
         const editColumns = document.querySelectorAll(".edit-column");
@@ -209,7 +234,10 @@
             let entries = [];
 
             records.forEach(row => {
-                const date = row.querySelector("td:first-child").innerText.trim();
+                const isChecked = row.querySelector(".row-checkbox")?.checked;
+                if (!isChecked) return;
+
+                const date = row.querySelector("td:nth-child(2)").innerText.trim();  // เปลี่ยนเป็น td:nth-child(2) เพราะมี checkbox เพิ่ม
                 const branchIn = row.querySelector(".branch-in").value;
                 const branchOut = row.querySelector(".branch-out").value;
 
@@ -223,7 +251,7 @@
 
                 if (checkInTime && checkOutTime) {
                     entries.push({
-                        "date": date.split("/").reverse().join("-"), // แปลงเป็น YYYY-MM-DD
+                        "date": date.split("/").reverse().join("-"),
                         "branch_in": branchIn,
                         "check_in": checkInTime,
                         "branch_out": branchOut,
@@ -235,8 +263,8 @@
             if (entries.length === 0) {
                 Swal.fire({
                     icon: "warning",
-                    title: "⚠ ไม่มีการเปลี่ยนแปลง",
-                    text: "โปรดแก้ไขข้อมูลก่อนกดบันทึก!",
+                    title: "⚠ ไม่มีข้อมูลที่เลือก",
+                    text: "กรุณาเลือกข้อมูลที่ต้องการบันทึกด้วย checkbox",
                     confirmButtonText: "ตกลง"
                 });
                 return;
