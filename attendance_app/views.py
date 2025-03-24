@@ -1312,7 +1312,7 @@ def employee_attendance_history(request):
                                 branch_in = find_nearest_branch(single_log["lat"], single_log["lng"])
                                 check_out = None
                                 branch_out = "ไม่พบสาขา"
-                            else:
+                            elif single_log["timestamp"] > shift_midpoint:
                                 check_out = single_log["timestamp"]
                                 branch_out = find_nearest_branch(single_log["lat"], single_log["lng"])
                                 check_in = None
