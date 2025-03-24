@@ -1318,7 +1318,7 @@ def employee_attendance_history(request):
                                 check_in = None
                                 branch_in = "ไม่พบสาขา"
 
-                        else:
+                        elif len(logs) > 1:
                             check_in = logs[0]["timestamp"]
                             branch_in = find_nearest_branch(logs[0]["lat"], logs[0]["lng"])
                             check_out = logs[-1]["timestamp"]
