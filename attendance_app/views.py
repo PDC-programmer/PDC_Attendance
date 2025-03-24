@@ -1241,24 +1241,22 @@ def employee_attendance_history(request):
                     edit_time_map[date_str]["check_out"] = log["timestamp"]
                     edit_time_map[date_str]["branch_out"] = log["branch_id"]
 
-            # ✅ แมป TaLog
+            # ✅ Map GPS ต่อ timestamp
             ta_log_map = {}
             for log in ta_logs:
                 date_str = log["log_timestamp__date"].strftime("%Y-%m-%d")
                 timestamp = log["log_timestamp"]
-                lat = log["gps_lat"]
-                lng = log["gps_lng"]
 
                 if date_str not in ta_log_map:
                     ta_log_map[date_str] = {
-                        "timestamps": [],
-                        "check_in": None,
-                        "check_out": None,
-                        "branch_in": "ไม่พบสาขา",
-                        "branch_out": "ไม่พบสาขา",
+                        "logs": [],
                     }
 
-                ta_log_map[date_str]["timestamps"].append(timestamp)
+                ta_log_map[date_str]["logs"].append({
+                    "timestamp": timestamp,
+                    "lat": log["gps_lat"],
+                    "lng": log["gps_lng"],
+                })
 
             # ✅ แมปวันลาไปยัง records
             leave_map = {}
@@ -1294,38 +1292,46 @@ def employee_attendance_history(request):
                     })
                 else:  # ✅ ใช้ TaLog ถ้าไม่มี EditTimeAttendance
                     log_data = ta_log_map.get(date_str, {})
-                    timestamps = sorted(log_data.get("timestamps", []))
-                    shift = record.shift
+                    logs = sorted(log_data.get("logs", []), key=lambda x: x["timestamp"])
 
-                    if len(timestamps) == 1:
-                        single_log = timestamps[0]
-                        shift_midpoint = datetime.combine(record.date, shift.morning_end)
+                    # ✅ กำหนด default ให้ปลอดภัยก่อน
+                    check_in = None
+                    check_out = None
+                    branch_in = "ไม่พบสาขา"
+                    branch_out = "ไม่พบสาขา"
 
-                        if single_log < shift_midpoint:
-                            log_data["check_in"] = single_log
-                            log_data["branch_in"] = find_nearest_branch(float(lat),
-                                                                        float(lng)) if lat and lng else "ไม่พบสาขา"
+                    if logs:
+                        shift = record.shift
+
+                        if len(logs) == 1:
+                            single_log = logs[0]
+                            shift_midpoint = datetime.combine(record.date, shift.morning_end)
+
+                            if single_log["timestamp"] < shift_midpoint:
+                                check_in = single_log["timestamp"]
+                                branch_in = find_nearest_branch(single_log["lat"], single_log["lng"])
+                                check_out = None
+                                branch_out = "ไม่พบสาขา"
+                            else:
+                                check_out = single_log["timestamp"]
+                                branch_out = find_nearest_branch(single_log["lat"], single_log["lng"])
+                                check_in = None
+                                branch_in = "ไม่พบสาขา"
+
                         else:
-                            log_data["check_out"] = single_log
-                            log_data["branch_out"] = find_nearest_branch(float(lat),
-                                                                         float(lng)) if lat and lng else "ไม่พบสาขา"
-
-                    elif len(timestamps) > 1:
-                        log_data["check_in"] = timestamps[0]
-                        log_data["check_out"] = timestamps[-1]
-                        log_data["branch_in"] = find_nearest_branch(float(lat),
-                                                                    float(lng)) if lat and lng else "ไม่พบสาขา"
-                        log_data["branch_out"] = find_nearest_branch(float(lat),
-                                                                     float(lng)) if lat and lng else "ไม่พบสาขา"
+                            check_in = logs[0]["timestamp"]
+                            branch_in = find_nearest_branch(logs[0]["lat"], logs[0]["lng"])
+                            check_out = logs[-1]["timestamp"]
+                            branch_out = find_nearest_branch(logs[-1]["lat"], logs[-1]["lng"])
 
                     records.append({
                         "date": record.date,
                         "shift_day": record.get_shift_day_display(),
                         "shift_name": record.shift.name,
-                        "check_in": log_data.get("check_in"),
-                        "check_out": log_data.get("check_out"),
-                        "branch_in": log_data.get("branch_in"),
-                        "branch_out": log_data.get("branch_out"),
+                        "check_in": check_in,
+                        "check_out": check_out,
+                        "branch_in": branch_in,
+                        "branch_out": branch_out,
                         "leave_type": leave_info["leave_type"] if leave_info else None,
                         "leave_reason": leave_info["reason"] if leave_info else None,
                     })

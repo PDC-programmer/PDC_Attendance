@@ -7,7 +7,7 @@
         <h1 class="text-center">รายการคำขอของฉัน</h1>
 
         <!-- Search & Filter Form -->
-        <form method="GET" class="row g-3 mb-3">
+        <form method="GET" class="row g-3 mb-3" id="search-form">
             <div class="col-md-3">
                 <label for="approval_type" class="form-label">ประเภทคำขอ</label>
                 <select id="approval_type" name="approval_type" class="form-select">
@@ -135,6 +135,26 @@
 
 <script>
 $(document).ready(function () {
+    $("#search-form").on("submit", function (e) {
+    e.preventDefault(); // ป้องกันการโหลดหน้าอัตโนมัติ
+
+    Swal.fire({
+        title: "กำลังค้นหา...",
+        text: "กรุณารอสักครู่",
+        icon: "info",
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // ส่งฟอร์มหลังจากแสดง loading แล้ว
+    setTimeout(() => {
+        e.target.submit();  // ใช้ native form submit
+    }, 200); // เพิ่ม delay เล็กน้อยให้ Swal แสดงขึ้นมาแน่ ๆ
+});
+
     $("#select-all").change(function () {
         $(".approve-checkbox:not(:disabled)").prop("checked", $(this).prop("checked"));
     });
@@ -160,6 +180,17 @@ $(document).ready(function () {
             cancelButtonText: "ยกเลิก"
         }).then((result) => {
             if (result.isConfirmed) {
+                // 🔄 แสดง loading ก่อนทำ AJAX
+                Swal.fire({
+                    title: "กำลังยกเลิกคำขอ...",
+                    text: "โปรดรอสักครู่",
+                    icon: "info",
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
                 $.ajax({
                     url: "{% url 'bulk_cancel_requests' %}",
                     method: "POST",
