@@ -10,8 +10,8 @@ import json
 from attendance_app.utils import calculate_working_hours  # Import the utility function
 from django.core.paginator import Paginator
 from django.db import transaction
-
-
+from user_app.models import BsnBranch, User
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 
 
 @login_required(login_url='log-in')
@@ -19,6 +19,10 @@ def approve_request(request, approval_id, action):
     """
     อนุมัติหรือปฏิเสธคำขอการลา (LeaveAttendance) หรือ เปลี่ยนกะ (ShiftSchedule)
     """
+    user = request.user
+    if not User.objects.filter(username=request.user, groups=3).exists():
+        return HttpResponseForbidden("คุณไม่ใช่ผู้อนุมัติ ไม่มีสิทธิ์อนุมัติได้ !")
+
     approval = get_object_or_404(Approval, id=approval_id)
 
     if action not in ["approved", "rejected"]:
@@ -35,6 +39,9 @@ def approve_request(request, approval_id, action):
 
 @login_required(login_url='log-in')
 def approval_list(request):
+    user = request.user
+    if not User.objects.filter(username=request.user, groups=3).exists():
+        return HttpResponseForbidden("คุณไม่ใช่ผู้อนุมัติ ไม่มีสิทธิ์เข้าถึงข้อมูลนี้ !")
     search_query = request.GET.get("search", "").strip()
     approval_type_filter = request.GET.get("approval_type", "")
     status = request.GET.get("status", "")

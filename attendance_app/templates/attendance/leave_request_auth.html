@@ -279,9 +279,20 @@
                         Swal.fire("ผิดพลาด", data.error, "error");
                     }
                      else {
-                        Swal.fire("สำเร็จ", "บันทึกคำขออนุมัติเสร็จสิ้น", "success").then(function() {
-                        window.location.href = "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/approval/approval-list-request-user/?search=&approval_type=leave";
-                        });
+                        Swal.fire({
+                                title: "สำเร็จ",
+                                text: "กำลังรีเฟรชหน้า",
+                                icon: "success",
+                                allowOutsideClick: false,
+                                showConfirmButton: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                    setTimeout(() => window.location.href = "/approval/approval-list-request-user/?search=&approval_type=leave&status=pending", 1000);
+                                }
+                            });
+<!--                        Swal.fire("สำเร็จ", "บันทึกคำขออนุมัติเสร็จสิ้น", "success").then(function() {-->
+<!--                        window.location.href = "https://plusdentalclinic-attendance-ec6ce5056c43.herokuapp.com/approval/approval-list-request-user/?search=&approval_type=leave";-->
+<!--                        });-->
                     }
                 })
                 .catch(err => {

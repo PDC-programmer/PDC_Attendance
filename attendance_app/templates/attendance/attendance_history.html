@@ -302,12 +302,15 @@
                     .then(data => {
                         if (data.success) {
                             Swal.fire({
+                                title: "สำเร็จ",
+                                text: "กำลังรีเฟรชหน้า",
                                 icon: "success",
-                                title: "บันทึกสำเร็จ!",
-                                text: "ข้อมูลของคุณได้รับการอัปเดตแล้ว",
-                                confirmButtonText: "ตกลง"
-                            }).then(() => {
-                                location.reload();
+                                allowOutsideClick: false,
+                                showConfirmButton: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                    setTimeout(() => location.reload(), 1000);
+                                }
                             });
                         } else {
                             Swal.fire({

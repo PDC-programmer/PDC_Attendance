@@ -141,6 +141,19 @@
 
 <script>
 $(document).ready(function () {
+    // ✅ แสดง Loading เมื่อ Submit Form (ค้นหา)
+    $("form").on("submit", function () {
+        Swal.fire({
+            title: "กำลังโหลดข้อมูล...",
+            text: "โปรดรอสักครู่",
+            icon: "info",
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    });
     $("#select-all").change(function () {
         $(".approve-checkbox:not(:disabled)").prop("checked", $(this).prop("checked"));
     });
@@ -173,10 +186,18 @@ $(document).ready(function () {
                     data: JSON.stringify({ approval_ids: selected, action: action }),
                     contentType: "application/json",
                     success: function (response) {
-                        Swal.fire("สำเร็จ!", "คำขอได้รับการอัปเดตแล้ว", "success").then(() => {
-                            location.reload();
-                        });
-                    },
+                            Swal.fire({
+                                title: "สำเร็จ",
+                                text: "กำลังรีเฟรชหน้า",
+                                icon: "success",
+                                allowOutsideClick: false,
+                                showConfirmButton: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                    setTimeout(() => location.reload(), 1000);
+                                }
+                            });
+                        },
                     error: function () {
                         Swal.fire("เกิดข้อผิดพลาด!", "ไม่สามารถดำเนินการได้", "error");
                     }
