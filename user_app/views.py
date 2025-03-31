@@ -224,3 +224,19 @@ def staff_list(request):
         "staff_type_filter": staff_type_filter,
         "page_obj": page_obj,
     })
+
+
+@login_required(login_url="log-in")
+def upload_profile_image(request):
+    user = request.user
+
+    if request.method == "POST" and request.FILES.get("image"):
+        image_file = request.FILES["image"]
+        user.image = image_file
+        user.save()
+        return redirect("upload-profile-image")
+
+    return render(request, "user_app/upload_image.html", {
+        "user": user
+    })
+

@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from django.contrib.auth.models import User
-from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveBalanceInitial,LeaveType
+from attendance_app.models import LeaveAttendance, LeaveBalance, LeaveBalanceInitial, LeaveType
 from line_app.models import UserProfile
 from user_app.models import User, BsnStaff
 from branch_app.models import BsnBranch
@@ -63,17 +63,20 @@ def register_line_id(request):
             leave_balances_initial = LeaveBalanceInitial.objects.filter(staff_code=staff_code)
             if not leave_balances_initial.exists():
 
-                leave_type_list = LeaveType.objects.filter(id__in=[2, 4])
+                leave_type_ids = [2, 4]
 
-                for leave_type in leave_type_list:
-                    LeaveBalance.objects.create(
-                        user=user,
-                        leave_type=leave_type,
-                        defaults={
-                            "total_hours": 240,
-                            "remaining_hours": 240,
-                        }
-                    )
+                for leave in leave_type_ids:
+                    # ตรวจสอบก่อนสร้างใหม่ (ถ้าไม่อยากซ้ำซ้อน)
+                    leave_type = LeaveType.objects.filter(id=leave).first()
+                    if not leave_type:
+                        print("❌ ไม่พบ LeaveType ที่ระบุ")
+                    if not LeaveBalance.objects.filter(user=user, leave_type=leave_type).exists():
+                        LeaveBalance.objects.create(
+                            user=user,
+                            leave_type=leave_type,
+                            total_hours=240,
+                            remaining_hours=240,
+                        )
 
             # บันทึกข้อมูลใน LeaveBalance
             for initial_balance in leave_balances_initial:
