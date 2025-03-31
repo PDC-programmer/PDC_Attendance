@@ -1,0 +1,23 @@
+<!-- templates/user_app/upload_image.html -->
+{% extends "general/base.html" %}
+{% block title %}อัปโหลดรูปโปรไฟล์{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center my-5">
+    <div class="container" style="width: 95%;">
+    <h1 class="mb-4 text-center">📸 อัปโหลดรูปโปรไฟล์</h1>
+
+    {% if user.image %}
+        <div class="mb-3 text-center">
+            <img src="{{ user.image.url }}" class="img-thumbnail" width="200" alt="Profile Image">
+        </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="image" accept="image/*" class="form-control mb-3" required>
+        <button type="submit" class="btn btn-primary">อัปโหลด</button>
+    </form>
+</div>
+</div>
+{% endblock %}
